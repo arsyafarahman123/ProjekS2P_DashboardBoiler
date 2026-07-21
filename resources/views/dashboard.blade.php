@@ -68,6 +68,7 @@
         position:relative;
         padding:4px 0;
         cursor:pointer;
+        text-decoration:none;
     }
     .sidebar-nav .nav-item.active{
         color:#fff;
@@ -464,10 +465,10 @@ function renderCards(cards){
     const alertColor = '#ef4444';
 
     const icons = {
-        pulse: `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 13 6 13 9 5 13 21 16 13 22 13"></polyline></svg>`,
-        gauge: `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 1 1 16 0"></path><path d="M12 15 L16.5 9.5"></path><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"></circle></svg>`,
-        warning: `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22.5 21 H1.5 Z"></path><line x1="12" y1="9.5" x2="12" y2="14.5"></line><circle cx="12" cy="17.5" r="0.6" fill="currentColor" stroke="none"></circle></svg>`,
-        bolt: `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 4 14 11 14 9 22 20 10 13 10 13 2"></polygon></svg>`,
+        pulse: `<img class="icon" src="{{ asset('images/SVgG.png') }}" alt="" width="18" height="18">`,
+        gauge: `<img class="icon" src="{{ asset('images/thermo.png') }}" alt="" width="18" height="18">`,
+        warning: `<img class="icon" src="{{ asset('images/pentung.png') }}" alt="" width="18" height="18">`,
+        bolt: `<img class="icon" src="{{ asset('images/listrik.png') }}" alt="" width="18" height="18">`,
     };
 
     el.innerHTML = `

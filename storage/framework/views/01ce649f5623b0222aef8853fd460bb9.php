@@ -13,7 +13,7 @@
       extend: {
         colors: {
           panel: "#1c355c",
-          bgnavy: "#28425f",
+          bgnavy: "#586C82",
           accent: "#f5a623",
           safe: "#22c55e",
           watch: "#eab308",
@@ -158,7 +158,7 @@
       <div class="bg-panel rounded-lg px-4 py-3">
         <div class="text-[10px] tracking-wider text-slate-400 font-semibold mb-1">OPERATIONAL STATUS</div>
         <div class="flex items-center gap-2 text-safe font-bold text-lg">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2 12h4l2 8 4-16 3 12 2-4h5" stroke="#22c55e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <img class="icon" src="<?php echo e(asset('images/SVgG.png')); ?>" alt="" width="18" height="18">
           <?php echo e($summary["operational_status"]); ?>
 
         </div>
@@ -166,14 +166,14 @@
       <div class="bg-panel rounded-lg px-4 py-3">
         <div class="text-[10px] tracking-wider text-slate-400 font-semibold mb-1">GLOBAL EFFICIENCY</div>
         <div class="flex items-center gap-2 text-white font-bold text-lg">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13.5V4a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0Z"/><line x1="12" y1="7" x2="12" y2="13"/></svg>
+          <img class="icon" src="<?php echo e(asset('images/thermo.png')); ?>" alt="" width="18" height="18">
           <?php echo e($summary["global_efficiency"]); ?>%
         </div>
       </div>
       <div class="bg-panel rounded-lg px-4 py-3">
         <div class="text-[10px] tracking-wider text-slate-400 font-semibold mb-1">ACTIVE ALERTS</div>
         <div class="flex items-center gap-2 font-bold text-lg">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 3.5 2 19h17L10.5 3.5Z"/><line x1="10.5" y1="9" x2="10.5" y2="14"/><circle cx="10.5" cy="16.5" r="0.6" fill="#eab308"/></svg>
+          <img class="icon" src="<?php echo e(asset('images/pentung.png')); ?>" alt="" width="18" height="18">
           <span class="text-white"><?php echo e($summary["active_alerts"]); ?></span>
           <span class="text-critical text-sm font-medium">(Critical: <?php echo e($summary["critical_count"]); ?>)</span>
         </div>
@@ -181,7 +181,7 @@
       <div class="bg-panel rounded-lg px-4 py-3">
         <div class="text-[10px] tracking-wider text-slate-400 font-semibold mb-1">BOILER LOAD</div>
         <div class="flex items-center gap-2 text-white font-bold text-lg">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>
+          <img class="icon" src="<?php echo e(asset('images/listrik.png')); ?>" alt="" width="18" height="18">
           <?php echo e($summary["boiler_load"]); ?>%
         </div>
       </div>
