@@ -156,12 +156,25 @@
     <div class="logo-box">
         <img src="{{ asset('images/logo.png') }}" alt="S2P Logo">
     </div>
-    <div class="sidebar-nav">
-        <div class="nav-item active">GLOBAL VIEW</div>
-        <div class="nav-item">TUBE MAPPING</div>
-        <div class="nav-item">RLA ANALYSIS</div>
-        <div class="nav-item">MAINTENANCE</div>
-    </div>
+<div class="sidebar-nav">
+
+    <a href="{{ route('global-view') }}" class="nav-item active">
+        GLOBAL VIEW
+    </a>
+
+   <a href="{{ route('tube.mapping') }}" class="nav-item">
+        TUBE MAPPING
+     </a>
+
+    <a href="#" class="nav-item">
+        RLA ANALYSIS
+    </a>
+
+    <a href="#" class="nav-item">
+        MAINTENANCE
+    </a>
+
+</div>
 </div>
 
     <div class="main">
