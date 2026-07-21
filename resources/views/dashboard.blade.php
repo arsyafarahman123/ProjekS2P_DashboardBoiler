@@ -166,11 +166,11 @@
         TUBE MAPPING
      </a>
 
-    <a href="#" class="nav-item">
+    <a href="{{ route('rla-analysis') }}" class="nav-item">
         RLA ANALYSIS
     </a>
 
-    <a href="#" class="nav-item">
+    <a href="{{ route('maintenance') }}" class="nav-item">
         MAINTENANCE
     </a>
 
