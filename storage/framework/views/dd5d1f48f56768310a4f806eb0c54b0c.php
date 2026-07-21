@@ -23,15 +23,15 @@
     --text-faint:#6d7f96;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
-  html, body{ height:100%; }
+  html{ scroll-behavior:smooth; }
   body{
     font-family:'Segoe UI', Arial, Helvetica, sans-serif;
-    background: #586C82;
+    margin:0;
+    background:#586C82;
     color:var(--text-light);
-    height:100vh;
-    overflow:hidden;
-    display:flex;
   }
+
+  .layout{ display:flex; min-height:100vh; font-family:'Segoe UI', Arial, Helvetica, sans-serif; }
 
   /* SIDEBAR */
   .sidebar{
@@ -43,6 +43,10 @@
     align-items:center;
     padding-top:16px;
     gap:36px;
+    position:sticky;
+    top:0;
+    align-self:flex-start;
+    height:100vh;
   }
   .sidebar .logo-box{
     width:52px;
@@ -79,13 +83,14 @@
   /* MAIN */
   .main{
     flex:1;
-    height:100vh;
-    padding:18px 26px 26px 22px;
+    position:relative;
+    min-height:100vh;
+    background:linear-gradient(120deg, #64798f 0%, #586C82 45%, #46586c 100%);
+    padding:22px 26px;
     display:flex;
     flex-direction:column;
     gap:14px;
     min-width:0;
-    overflow:hidden;
   }
 
   .title-row{
@@ -410,6 +415,8 @@
 </head>
 <body>
 
+<div class="layout">
+
   <div class="sidebar">
     <div class="logo-box"><img src="<?php echo e(asset('images/logo.png')); ?>" alt="S2P logo"></div>
     <div class="sidebar-nav">
@@ -682,6 +689,8 @@
     </div>
 
   </div>
+
+</div>
   <script>
     (function(){
       const wrap = document.querySelector('.chart-wrap');
