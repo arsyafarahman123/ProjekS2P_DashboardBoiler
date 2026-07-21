@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>GlobalView: Boiler Unit Status & Risk Map</title>
+<title>Tube Mapping - S2P Boiler Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
@@ -42,21 +42,10 @@
   .sidebar .logo-box{
     width:64px;
     height:44px;
-    background:#0e2037;
-    border:2px solid #f0f0f0;
-    border-radius:3px;
-    overflow:hidden;
     display:flex;
     align-items:center;
     justify-content:center;
     position:relative;
-  }
-  .sidebar .logo-box::after{
-    content:'';
-    position:absolute;
-    bottom:0; left:0; right:0;
-    height:4px;
-    background:#f5a623;
   }
   .sidebar .logo-box .logo-text{
     color:#f5a623;
@@ -97,21 +86,10 @@
   .header-logo-box{
     width:64px;
     height:44px;
-    background:#0e2037;
-    border:2px solid #f0f0f0;
-    border-radius:3px;
-    overflow:hidden;
     display:flex;
     align-items:center;
     justify-content:center;
     position:relative;
-  }
-  .header-logo-box::after{
-    content:'';
-    position:absolute;
-    bottom:0; left:0; right:0;
-    height:4px;
-    background:#f5a623;
   }
   .header-logo-box .logo-text{
     color:#f5a623;
@@ -127,13 +105,13 @@
 
   <aside class="sidebar">
     <div class="logo-box">
-      <span class="logo-text">S2P</span>
+      <img src="{{ asset('images/logo.png') }}" alt="S2P logo" class="w-full h-full object-contain">
     </div>
     <nav class="sidebar-nav">
-      <button type="button" @click="toast='Halaman Global View belum dibuat'; setTimeout(() => toast=null, 2000)" class="nav-item">GLOBAL VIEW</button>
-       <a href="{{ route('tube.mapping') }}" class="nav-item active">
-        <button type="button" @click="toast='Halaman RLA Analysis belum dibuat'; setTimeout(() => toast=null, 2000)" class="nav-item">RLA ANALYSIS</button>
-      <button type="button" @click="toast='Halaman Maintenance belum dibuat'; setTimeout(() => toast=null, 2000)" class="nav-item">MAINTENANCE</button>
+      <a href="{{ route('global-view') }}" class="nav-item">GLOBAL VIEW</a>
+      <a href="{{ route('tube.mapping') }}" class="nav-item active">TUBE MAPPING</a>
+      <a href="{{ route('rla-analysis') }}" class="nav-item">RLA ANALYSIS</a>
+      <a href="{{ route('maintenance') }}" class="nav-item">MAINTENANCE</a>
     </nav>
   </aside>
 
@@ -141,10 +119,10 @@
 
     <div class="flex items-center justify-between mb-5">
       <h1 class="text-lg font-bold tracking-wide">
-        <span class="text-accent">|</span> GLOBALVIEW: BOILER UNIT 1 STATUS & RISK MAP
+        <span class="text-accent">|</span> TUBE MAPPING: {{ strtoupper($unit) }} — {{ strtoupper($section) }}
       </h1>
       <div class="header-logo-box">
-        <span class="logo-text">S2P</span>
+        <img src="{{ asset('images/logo.png') }}" alt="S2P logo" class="w-full h-full object-contain">
       </div>
     </div>
 
