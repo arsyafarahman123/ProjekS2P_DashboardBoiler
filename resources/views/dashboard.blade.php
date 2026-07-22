@@ -13,7 +13,7 @@
     body {
         font-family: 'Inter', sans-serif; margin:0;
         background:
-            radial-gradient(ellipse 1000px 560px at 12% -8%, #f5b30122, transparent 60%),
+            radial-gradient(ellipse 1000px 560px at 12% -8%, #e0a94022, transparent 60%),
             radial-gradient(ellipse 900px 560px at 100% 0%, #1a4a7a3d, transparent 60%),
             radial-gradient(ellipse 700px 500px at 50% 110%, #0d3a5c40, transparent 60%),
             #050b1a;
@@ -33,29 +33,31 @@
         gap:36px;
         position:sticky; top:0; height:100vh;
     }
-    .logo-box{
-        width:52px;
-        height:40px;
-        background:#0e2037;
-        border:2px solid #f0f0f0;
-        border-radius:2px;
-        overflow:hidden;
-        display:flex; align-items:center; justify-content:center;
-    }
     .logo-box .logo-text{
         font-family:'Poppins',sans-serif;
         font-weight:800;
         font-size:15px;
         letter-spacing:.5px;
-        color:#f5b301;
+        color:#e0a940;
         line-height:1;
     }
-    .logo-box img{ width:100%; height:100%; object-fit:contain; display:block; }
-    .sidebar-nav{
-        display:flex;
-        flex-direction:column;
-        gap:44px;
-        margin-top:20px;
+    .sidebar .logo-box{
+        width:52px;
+        background:#0e2037;
+        border:2px solid #f0f0f0;
+        border-radius:2px;
+        overflow:hidden;
+    }
+    .logo-box img{ 
+        width:100%; 
+        height:100%; 
+        object-fit:contain; 
+        display:block; 
+    } 
+    .sidebar-nav{ display:flex; 
+        flex-direction:column; 
+        gap:44px; 
+        margin-top:20px; 
         align-items:center;
     }
     .sidebar-nav .nav-item{
@@ -64,17 +66,16 @@
         font-size:11px;
         letter-spacing:2px;
         font-weight:600;
-        color:#7fa3c9;
+        color:#6d7f96;
         position:relative;
-        padding:4px 0;
+        padding:4px 8px 4px 0;
+        border-right:3px solid transparent;
         cursor:pointer;
         text-decoration:none;
     }
     .sidebar-nav .nav-item.active{
         color:#fff;
-        border-left:3px solid #f5b301;
-        padding-left:10px;
-        margin-left:-13px;
+        border-right-color:#e0a940;
     }
     .main { flex:1; padding:0; }
     .page-panel {
@@ -91,61 +92,68 @@
     }
     .section-block:last-child { border-bottom: none; }
     .header-title-bar {
-        display:flex; align-items:center; gap:10px; margin-bottom:14px; position:relative; z-index:1;
+        display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; position:relative; z-index:1;
+    }
+    .header-title-bar .title-left {
+        display:flex; align-items:center; gap:10px;
     }
     .header-title-bar .accent-bar {
-        width:4px; height:18px; background:#f5b301; border-radius:2px; flex-shrink:0;
+        width:4px; height:20px; background:#e0a940; border-radius:2px; flex-shrink:0;
     }
     .header-title-bar h2 {
-        color:#f5b301; margin:0; font-weight:800; font-size:15px; letter-spacing:.6px;
-        font-family:'Poppins',sans-serif; text-transform:uppercase;
-        background:none; -webkit-text-fill-color:#f5b301;
+        color:#f0b94a; margin:0; font-weight:700; font-size:20px; letter-spacing:1.5px;
+        text-transform:uppercase;
+        background:none; -webkit-text-fill-color:#f0b94a;
     }
     .header-logo-corner {
-        width:56px; position:absolute; top:14px; right:18px; z-index:2;
+        width:70px; flex-shrink:0;
     }
     .header-logo-corner .logo-box{
-        width:56px; height:40px; background:#0e2037; border-top:2px solid #f5b301; border-bottom:2px solid #f5b301;
-        border-radius:2px; overflow:hidden; display:flex; align-items:center; justify-content:center;
+        width:70px; height:auto; background:transparent; border:none; border-radius:0;
+        overflow:visible; display:flex; align-items:center; justify-content:center;
+    }
+    .header-logo-corner .logo-box img{
+        width:100%; height:auto; object-fit:contain; display:block;
     }
     .glow-orb { position:absolute; border-radius:50%; filter: blur(60px); pointer-events:none; z-index:0; }
-    .stat-card { transition: transform .18s ease, background .18s ease, box-shadow .18s ease; border-radius:10px; position:relative;
-        background: linear-gradient(90deg,#16283f 0%,#1c3350 55%,#274361 100%);
-        border:1px solid #24425f; padding:14px 22px; color:white; min-height:64px;
+    .stat-card { transition: transform .18s ease, background .18s ease, box-shadow .18s ease; border-radius:5px; position:relative;
+        background: linear-gradient(180deg, rgba(0,26,87,0.25) 0%, rgba(14,32,56,1) 100%);
+        border:1px solid rgba(255,255,255,0.06); padding:14px 18px; color:white; min-height:64px;
         display:flex; flex-direction:row; align-items:center; gap:14px; }
-    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
     .stat-icon { flex-shrink:0; display:flex; align-items:center; justify-content:center; opacity:.95; }
     .stat-content { display:flex; flex-direction:column; }
-    .stat-label { color:#7fa3c9; font-size:10.5px; font-weight:700; letter-spacing:.8px; margin-bottom:5px; display:flex; align-items:center; }
-    .stat-value { font-size:19px; font-weight:800; font-family:'Poppins',sans-serif; display:flex; align-items:center; }
+    .stat-label { color:#9fb0c3; font-size:11px; font-weight:700; letter-spacing:1px; margin-bottom:8px; display:flex; align-items:center; }
+    .stat-value { font-size:20px; font-weight:700; font-family:inherit; display:flex; align-items:center; }
     @keyframes pulse-glow {
         0% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); } 70% { box-shadow: 0 0 0 9px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
     }
-    .pulse-dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#22c55e; margin-right:6px; animation: pulse-glow 1.8s infinite; }
-    .brand-badge { background: linear-gradient(135deg,#f5b301,#c9860f); border:1px solid #ffd873; border-radius:10px; padding:6px 14px;
-        color:#2a1a00; font-weight:800; font-size:11px; letter-spacing:1px; box-shadow: 0 3px 12px #f5b30144; }
-    ::-webkit-scrollbar { width: 8px; height:8px; }
-    ::-webkit-scrollbar-thumb { background:#2a5580; border-radius:6px; }
-    ::-webkit-scrollbar-thumb:hover { background:#f5b30188; }
+    .pulse-dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#3fdc84; margin-right:6px; animation: pulse-glow 1.8s infinite; }
+    .brand-badge { background: linear-gradient(135deg,#e0a940,#a97e1f); border:1px solid #f0c46a; border-radius:10px; padding:6px 14px;
+        color:#2a1a00; font-weight:800; font-size:11px; letter-spacing:1px; box-shadow: 0 3px 12px #e0a94044; }
     select.filter-select {
-        width:170px; border-radius:8px; background:#3c4e62; border:1px solid #7690a8; color:white;
-        padding:8px 10px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer;
+        min-width:160px; border-radius:3px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); color:#eef2f6;
+        padding:6px 30px 6px 12px; font-size:13px; font-weight:600; cursor:pointer;
+        appearance:none; -webkit-appearance:none;
+        background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%239fb0c3'/></svg>");
+        background-repeat:no-repeat;
+        background-position:right 12px center;
     }
-    select.filter-select:hover, select.filter-select:focus { border-color:#f5b301; outline:none; }
+    select.filter-select option{ color:#1a1a1a; background:#ffffff; font-weight:600; }
+    select.filter-select:hover, select.filter-select:focus { border-color:#e0a940; outline:none; }
     .status-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:999px; font-size:11px; font-weight:700; }
-    .panel-title { color:white; font-weight:800; font-size:13px; margin-bottom:10px; font-family:'Poppins',sans-serif; }
+    .panel-title { color:white; font-weight:700; font-size:12px; letter-spacing:1.5px; margin-bottom:10px; font-family:inherit; }
     .risk-row { display:flex; align-items:center; gap:10px; padding:8px 6px; border-bottom:1px solid #16324a; cursor:pointer; border-radius:6px; }
     .risk-row:hover { background: rgba(245,179,1,.06); }
     details > summary { list-style:none; cursor:pointer; }
     details > summary::-webkit-details-marker { display:none; }
     .detail-panel { margin-bottom:12px; border:1px solid #1c3a5c; border-radius:18px; box-shadow: 0 4px 18px rgba(0,0,0,0.35); padding:16px 20px;
         background: linear-gradient(160deg, #132f57 0%, #0d2140 65%); }
-    .detail-panel.focused { border-color:#3ba7ff; box-shadow: 0 0 0 2px #3ba7ff55; }
+    .detail-panel.focused { border-color:#7fd4e8; box-shadow: 0 0 0 2px #7fd4e855; }
     .stat-chip { text-align:center; min-width:80px; }
     .stat-chip .val { font-size:20px; font-weight:800; }
-    .stat-chip .lbl { color:#7fa3c9; font-size:10.5px; font-weight:700; letter-spacing:.5px; }
+    .stat-chip .lbl { color:#9fb0c3; font-size:10.5px; font-weight:700; letter-spacing:.5px; }
     table.tube-table { width:100%; border-collapse:collapse; }
-    table.tube-table th { padding:8px 10px; color:#7fa3c9; font-size:11px; text-align:left; border-bottom:1px solid #1c3a5c; position:sticky; top:0; background:#0d2140; }
+    table.tube-table th { padding:8px 10px; color:#9fb0c3; font-size:11px; text-align:left; border-bottom:1px solid #1c3a5c; position:sticky; top:0; background:#0d2140; }
     table.tube-table td { padding:7px 10px; color:white; font-size:12.5px; border-bottom:1px solid #16324a; }
     .table-scroll { max-height:360px; overflow-y:auto; border-radius:8px; }
     #boiler-3d, #risk-bar, #comparison-fig { width:100%; max-width:100%; }
@@ -181,23 +189,24 @@
     <div class="main">
     <div class="page-panel">
         <div class="section-block" style="padding-top:2px;">
-            <div class="glow-orb" style="width:260px;height:260px;background:#f5b301;opacity:.05;top:-100px;right:-60px;"></div>
-            <div class="glow-orb" style="width:220px;height:220px;background:#3ba7ff;opacity:.06;bottom:-90px;left:-40px;"></div>
+            <div class="glow-orb" style="width:260px;height:260px;background:#e0a940;opacity:.05;top:-100px;right:-60px;"></div>
+            <div class="glow-orb" style="width:220px;height:220px;background:#7fd4e8;opacity:.06;bottom:-90px;left:-40px;"></div>
 
-            <div class="header-logo-corner">
-                <div class="logo-box">
-                    <img src="{{ asset('images/logo.png') }}" alt="S2P Logo">
+            <div class="header-title-bar">
+                <div class="title-left">
+                    <span class="accent-bar"></span>
+                    <h2>GLOBAL VIEW: BOILER UNIT {{ $defaultUnit }} STATUS & RISK MAP</h2>
+                </div>
+                <div class="header-logo-corner">
+                    <div class="logo-box">
+                        <img src="{{ asset('images/logo.png') }}" alt="S2P Logo">
+                    </div>
                 </div>
             </div>
 
-            <div class="header-title-bar">
-                <span class="accent-bar"></span>
-                <h2>GLOBAL VIEW: BOILER UNIT {{ $defaultUnit }} STATUS & RISK MAP</h2>
-            </div>
-
-            <div style="display:flex;justify-content:flex-start;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:22px;position:relative;z-index:1;">
+            <div style="display:flex;justify-content:flex-start;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:22px;position:relative;z-index:1;background:rgba(255,255,255,0.03);padding:10px 16px;border-radius:4px;width:100%;">
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="color:#d7e4f0;font-size:11px;font-weight:700;letter-spacing:1px;">UNIT:</span>
+                    <span style="color:#f0b94a;font-size:12px;font-weight:700;letter-spacing:1px;">UNIT:</span>
                     <select id="unit-dd" class="filter-select" style="width:130px;">
                         @foreach($units as $u)
                             <option value="{{ $u }}" @selected($u === $defaultUnit)>{{ $u }}</option>
@@ -205,7 +214,7 @@
                     </select>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="color:#d7e4f0;font-size:11px;font-weight:700;letter-spacing:1px;">TAHUN:</span>
+                    <span style="color:#f0b94a;font-size:12px;font-weight:700;letter-spacing:1px;">TAHUN:</span>
                     <select id="year-dd" class="filter-select" style="width:120px;">
                         @foreach($years as $y)
                             <option value="{{ $y }}" @selected($y == $defaultYear)>{{ $y }}</option>
@@ -214,17 +223,19 @@
                 </div>
             </div>
 
-            <div id="status-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;position:relative;z-index:1;"></div>
+            <div id="status-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;position:relative;z-index:1;">
+                <div style="grid-column:1/-1;padding:20px;text-align:center;color:#9fb0c3;font-size:12px;letter-spacing:1px;">Loading data...</div>
+            </div>
         </div>
 
         <div class="section-block">
             <div style="display:flex;gap:16px;align-items:stretch;flex-wrap:wrap;position:relative;z-index:1;">
-                <div style="flex:1.4;min-width:420px;background:linear-gradient(160deg,#122c52,#0d2140);border:1px solid #1e3a5f;border-radius:14px;padding:14px;box-shadow:0 6px 20px rgba(0,0,0,.3);">
+                <div style="flex:1.4;min-width:420px;background:linear-gradient(180deg, rgba(0,26,87,0.25) 0%, rgba(14,32,56,1) 100%);border:1px solid rgba(255,255,255,0.06);border-radius:5px;padding:14px;box-shadow:0 6px 20px rgba(0,0,0,.3);">
                     <div id="boiler-3d"></div>
                 </div>
-                <div style="flex:1;min-width:340px;background:linear-gradient(160deg,#122c52,#0d2140);border:1px solid #1e3a5f;border-radius:14px;padding:14px;box-shadow:0 6px 20px rgba(0,0,0,.3);">
+                <div style="flex:1;min-width:340px;background:linear-gradient(180deg, rgba(0,26,87,0.25) 0%, rgba(14,32,56,1) 100%);border:1px solid rgba(255,255,255,0.06);border-radius:5px;padding:14px;box-shadow:0 6px 20px rgba(0,0,0,.3);">
                     <div class="panel-title">📊 Risk Summary by Section</div>
-                    <div id="risk-list" style="margin-bottom:8px;"></div>
+                    <div id="risk-list" style="margin-bottom:8px;color:#9fb0c3;font-size:12px;">Loading data...</div>
                     <div id="risk-bar"></div>
                     <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;
                         padding:14px 22px; background:#0e2a55; border-radius:999px; border:1px solid #1c3f6e;">
@@ -245,13 +256,15 @@
             </div>
         </div>
 
-        <div class="section-block" style="padding-bottom:2px;">
-            <div class="panel-title" style="display:flex;align-items:center;gap:10px;text-transform:uppercase;font-size:15px;letter-spacing:.4px;">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#22c55e" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 17 9 10 13 14 22 4"></polyline><polyline points="16 4 22 4 22 10"></polyline></svg>
-                Perbandingan 5 Tahun Terakhir
+        <div class="section-block" style="padding-bottom:2px;border-bottom:none;">
+            <div style="background:linear-gradient(180deg, rgba(0,26,87,0.25) 0%, rgba(14,32,56,1) 100%);border:1px solid rgba(255,255,255,0.06);border-radius:5px;padding:16px 18px;">
+                <div class="panel-title" style="display:flex;align-items:center;gap:10px;text-transform:uppercase;font-size:15px;letter-spacing:.4px;margin-bottom:0;">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#3fdc84" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 17 9 10 13 14 22 4"></polyline><polyline points="16 4 22 4 22 10"></polyline></svg>
+                    Perbandingan 5 Tahun Terakhir
+                </div>
+                <div id="comparison-legend" style="display:flex;flex-wrap:wrap;gap:26px;margin:14px 4px 16px 4px;color:#9fb0c3;font-size:12px;">Loading data...</div>
+                <div id="comparison-fig"></div>
             </div>
-            <div id="comparison-legend" style="display:flex;flex-wrap:wrap;gap:26px;margin:14px 4px 16px 4px;"></div>
-            <div id="comparison-fig"></div>
         </div>
     </div>
     </div>
@@ -262,6 +275,7 @@
 const SECTIONS = @json($sections);
 const SECTION_LAYOUT = @json($sectionLayout);
 const STATUS_COLOR = @json($statusColor);
+const INITIAL_PAYLOAD = @json($initialPayload);
 const STEEL = '#5b7a99';
 let focusedSection = null;
 
@@ -437,7 +451,7 @@ function buildRiskBar(sectionSummary){
     return {traces, layout};
 }
 
-const COMPARISON_PALETTE = ['#f5b301', '#3ba7ff', '#ef4444', '#22c55e', '#a78bfa'];
+const COMPARISON_PALETTE = ['#e0a940', '#7fd4e8', '#e5484d', '#3fdc84', '#a78bfa'];
 
 function buildComparisonChart(comparison){
     const traces = Object.entries(comparison).map(([tubeId, rows], idx) => {
@@ -449,7 +463,7 @@ function buildComparisonChart(comparison){
         };
     });
     const layout = {
-        height:280, autosize:true, paper_bgcolor:'#0d2140', plot_bgcolor:'#0d2140',
+        height:280, autosize:true, paper_bgcolor:'transparent', plot_bgcolor:'transparent',
         font:{color:'#cfe3f5', family:'Inter, sans-serif'},
         margin:{l:34,r:20,t:20,b:60},
         xaxis:{title:{text:'Tahun', standoff:18}, showgrid:false, dtick:1, tickformat:'d'},
@@ -462,7 +476,7 @@ function buildComparisonChart(comparison){
 // ================= Render DOM (port html.Div cards / risk-list) =================
 function renderCards(cards){
     const el = document.getElementById('status-cards');
-    const alertColor = '#ef4444';
+    const alertColor = '#e5484d';
 
     const icons = {
         pulse: `<img class="icon" src="{{ asset('images/SVgG.png') }}" alt="" width="18" height="18">`,
@@ -473,31 +487,31 @@ function renderCards(cards){
 
     el.innerHTML = `
         <div class="stat-card">
-            <div class="stat-icon" style="color:#22c55e;">${icons.pulse}</div>
+            <div class="stat-icon" style="color:#3fdc84;">${icons.pulse}</div>
             <div class="stat-content">
                 <div class="stat-label">OPERATIONAL STATUS</div>
-                <div class="stat-value" style="color:#22c55e;"><span class="pulse-dot"></span>ACTIVE</div>
+                <div class="stat-value" style="color:#3fdc84;"><span class="pulse-dot"></span>ACTIVE</div>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon" style="color:#3ba7ff;">${icons.gauge}</div>
+            <div class="stat-icon" style="color:#7fd4e8;">${icons.gauge}</div>
             <div class="stat-content">
                 <div class="stat-label">GLOBAL EFFICIENCY</div>
-                <div class="stat-value" style="color:#5dc9d6;">${cards.efficiency}%</div>
+                <div class="stat-value" style="color:#7fd4e8;">${cards.efficiency}%</div>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon" style="color:#f5b301;">${icons.warning}</div>
+            <div class="stat-icon" style="color:#e0a940;">${icons.warning}</div>
             <div class="stat-content">
                 <div class="stat-label">ACTIVE ALERTS</div>
-                <div class="stat-value" style="color:#f5b301;">${cards.critical_count + cards.watch_count} <span style="color:${alertColor};font-size:13px;font-weight:700;margin-left:6px;">(Critical: ${cards.critical_count})</span></div>
+                <div class="stat-value" style="color:#e0a940;">${cards.critical_count + cards.watch_count} <span style="color:${alertColor};font-size:13px;font-weight:700;margin-left:6px;">(Critical: ${cards.critical_count})</span></div>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon" style="color:#3ba7ff;">${icons.bolt}</div>
+            <div class="stat-icon" style="color:#7fd4e8;">${icons.bolt}</div>
             <div class="stat-content">
                 <div class="stat-label">BOILER LOAD</div>
-                <div class="stat-value" style="color:#5dc9d6;">${cards.load}%</div>
+                <div class="stat-value" style="color:#7fd4e8;">${cards.load}%</div>
             </div>
         </div>`;
 }
@@ -558,8 +572,8 @@ function escapeHtml(str){
 
 function showError(html){
     const el = document.getElementById('status-cards');
-    el.innerHTML = `<div style="grid-column:1/-1;background:#3a1414;border:1px solid #ef4444;border-radius:12px;padding:16px;color:#fecaca;font-size:13px;">
-        <strong style="color:#ef4444;">⚠️ Dashboard gagal load data</strong><br>${html}
+    el.innerHTML = `<div style="grid-column:1/-1;background:#3a1414;border:1px solid #e5484d;border-radius:12px;padding:16px;color:#fecaca;font-size:13px;">
+        <strong style="color:#e5484d;">⚠️ Dashboard gagal load data</strong><br>${html}
     </div>`;
 }
 
@@ -598,7 +612,12 @@ window.addEventListener('resize', () => {
 
 document.getElementById('unit-dd').addEventListener('change', loadData);
 document.getElementById('year-dd').addEventListener('change', loadData);
-loadData();
+
+// Render data awal langsung dari payload yang sudah disiapkan server (tanpa fetch),
+// biar nggak ada jeda "Loading data..." pas pertama kali halaman dibuka.
+// fetch ke /api/boiler-data cuma jalan lagi kalau filter UNIT/TAHUN diganti.
+lastPayload = INITIAL_PAYLOAD;
+render(INITIAL_PAYLOAD);
 </script>
 </body>
 </html>

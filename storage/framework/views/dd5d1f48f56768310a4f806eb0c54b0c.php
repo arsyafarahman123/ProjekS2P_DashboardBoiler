@@ -25,13 +25,13 @@
   *{box-sizing:border-box; margin:0; padding:0;}
   html{ scroll-behavior:smooth; }
   body{
-    font-family:'Segoe UI', Arial, Helvetica, sans-serif;
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Arial, Helvetica, sans-serif;
     margin:0;
     background:#586C82;
     color:var(--text-light);
   }
 
-  .layout{ display:flex; min-height:100vh; font-family:'Segoe UI', Arial, Helvetica, sans-serif; }
+  .layout{ display:flex; min-height:100vh; font-family:'Inter', 'Segoe UI', Arial, Helvetica, sans-serif; }
 
   /* SIDEBAR */
   .sidebar{
@@ -48,14 +48,19 @@
     align-self:flex-start;
     height:100vh;
   }
-  .sidebar .logo-box{
-    width:52px;
-    background:#0e2037;
-    border:2px solid #f0f0f0;
-    border-radius:2px;
-    overflow:hidden;
+    .sidebar .logo-box{
+        width:52px;
+        background:#0e2037;
+        border:2px solid #f0f0f0;
+        border-radius:2px;
+        overflow:hidden;
   }
-  .sidebar .logo-box img{ width:100%; display:block; }
+  .sidebar .logo-box img{ 
+    width:100%; 
+    height:100%;
+    object-fit:contain;
+    display:block; 
+  }
   .sidebar-nav{
     display:flex;
     flex-direction:column;
@@ -63,22 +68,21 @@
     margin-top:20px;
     align-items:center;
   }
-  .sidebar-nav .nav-item{
-    writing-mode:vertical-rl;
-    transform:rotate(180deg);
-    font-size:11px;
-    letter-spacing:2px;
-    font-weight:600;
-    color:var(--text-faint);
-    position:relative;
-    padding:4px 0;
-  }
-  .sidebar-nav .nav-item.active{
-    color:#fff;
-    border-left:3px solid var(--gold);
-    padding-left:10px;
-    margin-left:-13px;
-  }
+.sidebar-nav .nav-item{
+  writing-mode:vertical-rl;
+  transform:rotate(180deg);
+  font-size:11px;
+  letter-spacing:2px;
+  font-weight:600;
+  color:var(--text-faint);
+  position:relative;
+  padding:4px 8px 4px 0;
+  border-right:3px solid transparent;
+}
+.sidebar-nav .nav-item.active{
+  color:#fff;
+  border-right-color:var(--gold);
+}
 
   /* MAIN */
   .main{
@@ -98,13 +102,24 @@
     align-items:center;
     justify-content:space-between;
   }
+  .title-row .title-left{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .title-row .accent-bar{
+    width:4px;
+    height:20px;
+    background:#e0a940;
+    border-radius:2px;
+    flex-shrink:0;
+  }
   .title-row h1{
     font-size:20px;
     letter-spacing:1.5px;
     color:var(--gold-text);
     font-weight:700;
-    border-left:4px solid var(--gold);
-    padding-left:12px;
+    margin:0;
   }
   .header-logo{
     width:70px;
@@ -112,18 +127,19 @@
     border-radius:2px;
     overflow:hidden;
   }
-  .header-logo img{ width:100%; display:block; }
+  .header-logo img{ width:100%; display:block; 
+  }
 
   /* FILTER BAR */
-  .filter-bar{
-    display:flex;
-    align-items:center;
-    gap:26px;
-    background:rgba(255,255,255,0.03);
-    padding:10px 16px;
-    border-radius:4px;
-    flex-wrap:wrap;
-  }
+.filter-bar{
+  display:inline-flex;
+  align-items:center;
+  gap:26px;
+  background:rgba(255,255,255,0.03);
+  padding:10px 16px;
+  border-radius:4px;
+  flex-wrap:wrap;
+}
   .filter-bar label{
     font-size:12px;
     font-weight:700;
@@ -180,7 +196,10 @@
   }
   .stat-card .value .icon{ font-size:18px; line-height:1; }
   .stat-card.status .value{ color:#00FF41; }
-  .stat-card.status .dot{ color:#00FF41; font-size:12px; }
+  @keyframes pulse-glow {
+    0% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); } 70% { box-shadow: 0 0 0 9px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  }
+  .pulse-dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#3fdc84; margin-right:6px; animation: pulse-glow 1.8s infinite; }
   .stat-card.efficiency .value{ color:var(--cyan); }
   .stat-card.alerts .value{ color:var(--gold-text); }
   .stat-card.alerts .value .sub{ font-size:13px; color:var(--red); font-weight:600; margin-left:6px; }
@@ -205,6 +224,10 @@
     flex-direction:column;
     justify-content:center;
     min-height:0;
+  }
+  .content-grid > .panel .chart-wrap svg{
+    aspect-ratio: 800 / 400;
+    height:auto;
   }
 .panel{
   background:linear-gradient(180deg, rgba(0,26,87,0.25) 0%, rgba(14,32,56,1) 100%);
@@ -430,7 +453,10 @@
   <div class="main">
 
     <div class="title-row">
-      <h1>RLA ANALYSIS: <?php echo e(strtoupper($selectedSection)); ?></h1>
+      <div class="title-left">
+        <span class="accent-bar"></span>
+        <h1>RLA ANALYSIS: <?php echo e(strtoupper($selectedSection)); ?></h1>
+      </div>
       <div class="header-logo"><img src="<?php echo e(asset('images/logo.png')); ?>" alt="S2P logo"></div>
     </div>
 
@@ -464,7 +490,7 @@
         <div class="label">OPERATIONAL STATUS</div>
         <div class="value">
           <img class="icon" src="<?php echo e(asset('images/SVgG.png')); ?>" alt="" width="18" height="18">
-          <span class="dot">●</span> <?php echo e($data['status']); ?>
+          <span class="pulse-dot"></span> <?php echo e($data['status']); ?>
 
         </div>
       </div>

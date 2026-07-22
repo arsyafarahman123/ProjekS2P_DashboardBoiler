@@ -12,12 +12,12 @@
     theme: {
       extend: {
         colors: {
-          panel: "#1c355c",
+          panel: "#0e2038",
           bgnavy: "#586C82",
-          accent: "#f5a623",
-          safe: "#22c55e",
-          watch: "#eab308",
-          critical: "#ef4444",
+          accent: "#e0a940",
+          safe: "#3fdc84",
+          watch: "#e0c23c",
+          critical: "#e5484d",
         }
       }
     }
@@ -27,6 +27,17 @@
   body { font-family: ui-sans-serif, system-ui, sans-serif; }
   .cell { transition: transform .12s ease; }
   .cell:hover { transform: scale(1.15); z-index: 10; position: relative; }
+  select option{ color:#1a1a1a; background:#ffffff; font-weight:600; }
+  .bg-panel{
+    background:linear-gradient(180deg, rgba(0,26,87,0.25) 0%, rgba(14,32,56,1) 100%) !important;
+    border:1px solid rgba(255,255,255,0.06);
+  }
+  .rounded-lg{ border-radius:5px !important; }
+  @keyframes pulse-glow {
+    0% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); } 70% { box-shadow: 0 0 0 9px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  }
+  .pulse-dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#3fdc84; margin-right:6px; animation: pulse-glow 1.8s infinite; }
+  .accent-bar { width:4px; height:20px; background:#e0a940; border-radius:2px; flex-shrink:0; display:inline-block; }
 
   .sidebar{
     width:72px;
@@ -37,21 +48,20 @@
     align-items:center;
     padding-top:16px;
     gap:36px;
-    min-height:100vh;
+    position:sticky;
+    top:0;
+    align-self:flex-start;
+    height:100vh;
   }
   .sidebar .logo-box{
-    width:64px;
-    height:44px;
+    width:52px;
+    background:#0e2037;
+    border:2px solid #f0f0f0;
+    border-radius:2px;
+    overflow:hidden;
     display:flex;
     align-items:center;
     justify-content:center;
-    position:relative;
-  }
-  .sidebar .logo-box .logo-text{
-    color:#f5a623;
-    font-weight:800;
-    font-size:15px;
-    letter-spacing:1px;
   }
   .sidebar-nav{
     display:flex;
@@ -66,11 +76,12 @@
     font-size:11px;
     letter-spacing:2px;
     font-weight:600;
-    color:#64748b;
+    color:#6d7f96;
     position:relative;
-    padding:4px 0;
+    padding:4px 8px 4px 0;
     background:none;
     border:none;
+    border-right:3px solid transparent;
     cursor:pointer;
   }
   .sidebar-nav .nav-item:hover{
@@ -78,25 +89,19 @@
   }
   .sidebar-nav .nav-item.active{
     color:#fff;
-    border-left:3px solid #f5a623;
-    padding-left:10px;
-    margin-left:-13px;
+    border-right-color:#e0a940;
   }
 
   .header-logo-box{
-    width:64px;
-    height:44px;
+    width:70px;
+    border:2px solid #f0f0f0;
+    border-radius:2px;
+    overflow:hidden;
     display:flex;
     align-items:center;
     justify-content:center;
-    position:relative;
   }
-  .header-logo-box .logo-text{
-    color:#f5a623;
-    font-weight:800;
-    font-size:15px;
-    letter-spacing:1px;
-  }
+  body > div.flex{ min-height:100vh; }
 </style>
 </head>
 <body class="bg-bgnavy text-slate-200 min-h-screen" x-data="tubeDashboard()">
@@ -118,35 +123,38 @@
   <main class="flex-1 p-6">
 
     <div class="flex items-center justify-between mb-5">
-      <h1 class="text-lg font-bold tracking-wide">
-        <span class="text-accent">|</span> TUBE MAPPING: <?php echo e(strtoupper($unit)); ?> — <?php echo e(strtoupper($section)); ?>
+      <div class="flex items-center gap-[10px]">
+        <span class="accent-bar"></span>
+        <h1 class="text-[20px] font-bold tracking-[1.5px] text-[#f0b94a] m-0">
+          TUBE MAPPING: <?php echo e(strtoupper($unit)); ?> — <?php echo e(strtoupper($section)); ?>
 
-      </h1>
+        </h1>
+      </div>
       <div class="header-logo-box">
         <img src="<?php echo e(asset('images/logo.png')); ?>" alt="S2P logo" class="w-full h-full object-contain">
       </div>
     </div>
 
-    <form method="GET" class="flex flex-wrap gap-6 items-center mb-5 text-xs">
+    <form method="GET" class="flex flex-wrap gap-6 items-center mb-5 text-xs w-full bg-white/[0.03] rounded-[4px] px-4 py-2.5">
       <div>
-        <label class="text-slate-400 mr-2 font-semibold">BOILER SECTION:</label>
-        <select name="section" onchange="this.form.submit()" class="bg-panel border border-white/10 rounded px-3 py-1.5 text-slate-100">
+        <label class="text-[#f0b94a] mr-2 font-bold tracking-wide">BOILER SECTION:</label>
+        <select name="section" onchange="this.form.submit()" class="bg-white/[0.08] border border-white/[0.12] rounded-[3px] px-3 py-2 pr-8 text-slate-100 font-semibold appearance-none" style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%2710%27 height=%276%27><path d=%27M0 0l5 6 5-6z%27 fill=%27%239fb0c3%27/></svg>');background-repeat:no-repeat;background-position:right 12px center;">
           <?php $__currentLoopData = $sections; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $s): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <option value="<?php echo e($s); ?>" <?php if($s===$section): echo 'selected'; endif; ?>><?php echo e(strtoupper($s)); ?></option>
           <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </select>
       </div>
       <div>
-        <label class="text-slate-400 mr-2 font-semibold">UNIT:</label>
-        <select name="unit" onchange="this.form.submit()" class="bg-panel border border-white/10 rounded px-3 py-1.5 text-slate-100">
+        <label class="text-[#f0b94a] mr-2 font-bold tracking-wide">UNIT:</label>
+        <select name="unit" onchange="this.form.submit()" class="bg-white/[0.08] border border-white/[0.12] rounded-[3px] px-3 py-2 pr-8 text-slate-100 font-semibold appearance-none" style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%2710%27 height=%276%27><path d=%27M0 0l5 6 5-6z%27 fill=%27%239fb0c3%27/></svg>');background-repeat:no-repeat;background-position:right 12px center;">
           <?php $__currentLoopData = $units; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $u): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <option value="<?php echo e($u); ?>" <?php if($u===$unit): echo 'selected'; endif; ?>><?php echo e(strtoupper($u)); ?></option>
           <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </select>
       </div>
       <div>
-        <label class="text-slate-400 mr-2 font-semibold">TAHUN:</label>
-        <select name="year" onchange="this.form.submit()" class="bg-panel border border-white/10 rounded px-3 py-1.5 text-slate-100">
+        <label class="text-[#f0b94a] mr-2 font-bold tracking-wide">TAHUN:</label>
+        <select name="year" onchange="this.form.submit()" class="bg-white/[0.08] border border-white/[0.12] rounded-[3px] px-3 py-2 pr-8 text-slate-100 font-semibold appearance-none" style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 width=%2710%27 height=%276%27><path d=%27M0 0l5 6 5-6z%27 fill=%27%239fb0c3%27/></svg>');background-repeat:no-repeat;background-position:right 12px center;">
           <?php $__currentLoopData = $years; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $y): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <option value="<?php echo e($y); ?>" <?php if($y==$year): echo 'selected'; endif; ?>><?php echo e($y); ?></option>
           <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -159,7 +167,7 @@
         <div class="text-[10px] tracking-wider text-slate-400 font-semibold mb-1">OPERATIONAL STATUS</div>
         <div class="flex items-center gap-2 text-safe font-bold text-lg">
           <img class="icon" src="<?php echo e(asset('images/SVgG.png')); ?>" alt="" width="18" height="18">
-          <?php echo e($summary["operational_status"]); ?>
+          <span class="pulse-dot"></span> <?php echo e($summary["operational_status"]); ?>
 
         </div>
       </div>
@@ -191,35 +199,35 @@
 
       <div class="col-span-2 bg-panel rounded-lg p-4 relative">
         <div class="text-xs font-bold tracking-wide mb-3"><?php echo e(strtoupper($section)); ?> TUBE INTERACTIVE GRID MAP</div>
-        <div class="overflow-x-auto">
-          <table class="border-collapse text-[10px] select-none">
+        <div class="overflow-x-auto flex justify-center">
+          <table class="border-collapse text-xs select-none">
             <thead>
               <tr>
-                <th class="w-6"></th>
+                <th class="w-8"></th>
                 <?php for($c=1;$c<=$maxCol;$c++): ?>
-                  <th class="text-slate-500 font-normal px-1"><?php echo e($c); ?></th>
+                  <th class="text-white font-normal px-1.5"><?php echo e($c); ?></th>
                 <?php endfor; ?>
               </tr>
             </thead>
             <tbody>
               <?php for($r=1;$r<=$maxRow;$r++): ?>
                 <tr>
-                  <td class="text-slate-500 pr-1"><?php echo e($r); ?></td>
+                  <td class="text-white pr-1.5"><?php echo e($r); ?></td>
                   <?php for($c=1;$c<=$maxCol;$c++): ?>
                     <?php $t = $grid[$r][$c] ?? null; ?>
                     <?php if($t): ?>
-                      <td class="p-[1px]">
+                      <td class="p-[2px]">
                         <button
                           type="button"
-                          @click="selectTube(<?php echo \Illuminate\Support\Js::from($t->tube_id)->toHtml() ?>, <?php echo \Illuminate\Support\Js::from($t->material)->toHtml() ?>, <?php echo e($t->current_thickness_mm); ?>, <?php echo e($t->min_design_thickness_mm); ?>, <?php echo e($t->remaining_life_months); ?>, <?php echo e($t->creep_pct); ?>, <?php echo \Illuminate\Support\Js::from($t->status)->toHtml() ?>, <?php echo e($t->corrosion_detected ? "true" : "false"); ?>)"
-                          class="cell w-6 h-6 flex items-center justify-center rounded-sm font-semibold text-[10px] text-slate-900
+                          @click="selectTube(<?php echo \Illuminate\Support\Js::from($t->tube_id)->toHtml() ?>, <?php echo \Illuminate\Support\Js::from($t->material)->toHtml() ?>, <?php echo e($t->current_thickness_mm); ?>, <?php echo e($t->min_design_thickness_mm); ?>, <?php echo e($t->remaining_life_months); ?>, <?php echo e($t->creep_pct); ?>, <?php echo \Illuminate\Support\Js::from($t->status)->toHtml() ?>, <?php echo e($t->corrosion_detected ? "true" : "false"); ?>, $event)"
+                          class="cell w-8 h-8 flex items-center justify-center rounded-sm font-semibold text-xs text-slate-900
                             <?php echo e($t->status === "Critical" ? "bg-critical text-white" : ($t->status === "Watch" ? "bg-watch" : "bg-safe")); ?>">
                           <?php echo e($c); ?>
 
                         </button>
                       </td>
                     <?php else: ?>
-                      <td class="w-6 h-6"></td>
+                      <td class="w-8 h-8"></td>
                     <?php endif; ?>
                   <?php endfor; ?>
                 </tr>
@@ -229,7 +237,8 @@
         </div>
 
         <div x-show="selected" x-cloak @click.outside="selected=null"
-             class="absolute top-24 left-16 w-80 bg-[#0d1830] border border-white/10 rounded-lg shadow-2xl p-4 text-xs z-20">
+             :style="popupStyle"
+             class="absolute w-80 bg-[#0d1830] border border-white/10 rounded-lg shadow-2xl p-4 text-xs z-20">
           <div class="flex justify-between items-start mb-2">
             <div class="font-bold text-slate-200">SELECTED TUBE: <span x-text="selected?.id"></span></div>
             <button @click="selected=null" class="text-slate-400 hover:text-white">X</button>
@@ -308,10 +317,10 @@
         <div class="relative flex-1 min-w-[220px]">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" class="absolute left-3 top-1/2 -translate-y-1/2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input x-model="filterTubeId" type="text" placeholder="Filter Tube ID..."
-                 class="w-full bg-[#0d1830] border border-white/10 rounded pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-accent">
+                 class="w-full bg-[#fffff] border border-white/10 rounded pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-accent">
         </div>
-        <a href="#" class="bg-accent hover:bg-accent/90 text-[#2a1a00] font-bold text-xs px-4 py-2 rounded flex items-center gap-2 whitespace-nowrap">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2a1a00" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 19h16"/></svg>
+        <a href="#" class="font-bold text-xs px-4 py-2.5 rounded flex items-center justify-center gap-2 whitespace-nowrap" style="background:linear-gradient(135deg, #c9982f 0%, #8a6520 100%);color:#fff;letter-spacing:0.5px;">
+          <img src="<?php echo e(asset('images/download.png')); ?>" alt="" style="width:16px;height:16px;filter:brightness(0) invert(1);">
           EXPORT REPORT (PDF/EXCEL)
         </a>
       </div>
@@ -338,10 +347,32 @@
 function tubeDashboard() {
   return {
     selected: null,
+    popupStyle: '',
     toast: null,
     filterTubeId: '',
-    selectTube(id, material, thickness, minThickness, life, creep, status, corrosion) {
+    selectTube(id, material, thickness, minThickness, life, creep, status, corrosion, event) {
       this.selected = { id, material, thickness, minThickness, life, creep, status, corrosion };
+
+      const btn = event.currentTarget;
+      const container = btn.closest('.relative');
+      if (!container) return;
+
+      const btnRect = btn.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const popupWidth = 320;   // sesuai w-80
+      const popupHeightEstimate = 190;
+
+      let left = (btnRect.left - containerRect.left) + (btnRect.width / 2) - (popupWidth / 2);
+      left = Math.max(8, Math.min(left, container.clientWidth - popupWidth - 8));
+
+      let top = (btnRect.bottom - containerRect.top) + 8;
+      if (top + popupHeightEstimate > container.clientHeight) {
+        // kalau ketutup batas bawah container, taruh di atas sel yang diklik
+        top = (btnRect.top - containerRect.top) - popupHeightEstimate - 8;
+      }
+      top = Math.max(8, top);
+
+      this.popupStyle = `top:${top}px; left:${left}px;`;
     }
   }
 }
@@ -385,8 +416,8 @@ const SECTION_LAYOUT = {
   "Air Preheater":  {x0:8.0, x1:9.5, y0:0, y1:2.2, z0:0.3, z1:1.7},
 };
 const SECTION_COLOR = {
-  "Waterwall": "#22c55e", "Superheater": "#eab308", "Reheater": "#22c55e",
-  "Economizer": "#22c55e", "Air Preheater": "#3ba7ff",
+  "Waterwall": "#3fdc84", "Superheater": "#e0c23c", "Reheater": "#3fdc84",
+  "Economizer": "#3fdc84", "Air Preheater": "#7fd4e8",
 };
 const STEEL = "#5b7a99";
 
@@ -541,5 +572,4 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 </body>
-</html>
-<?php /**PATH C:\Users\ASUS\Downloads\ProjekS2P_DashboardBoiler-fixed (3)\ProjekS2P_DashboardBoiler-main\resources\views/tube-mapping/index.blade.php ENDPATH**/ ?>
+</html><?php /**PATH C:\Users\ASUS\Downloads\ProjekS2P_DashboardBoiler-fixed (3)\ProjekS2P_DashboardBoiler-main\resources\views/tube-mapping/index.blade.php ENDPATH**/ ?>

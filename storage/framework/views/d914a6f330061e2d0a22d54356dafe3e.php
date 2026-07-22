@@ -9,12 +9,12 @@
     theme: {
       extend: {
         colors: {
-          panel: "#1c355c",
-          bgnavy: "#28425f",
-          accent: "#f5a623",
-          safe: "#22c55e",
-          watch: "#eab308",
-          critical: "#ef4444",
+          panel: "#0e2038",
+          bgnavy: "#586C82",
+          accent: "#e0a940",
+          safe: "#3fdc84",
+          watch: "#e0c23c",
+          critical: "#e5484d",
         }
       }
     }
@@ -22,6 +22,15 @@
 </script>
 <style>
   body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .bg-panel{
+    background:linear-gradient(180deg, rgba(0,26,87,0.25) 0%, rgba(14,32,56,1) 100%) !important;
+    border:1px solid rgba(255,255,255,0.06);
+  }
+  .rounded-lg{ border-radius:5px !important; }
+  .accent-bar { width:4px; height:20px; background:#e0a940; border-radius:2px; flex-shrink:0; display:inline-block; }
+  main.flex-1{
+    background:linear-gradient(120deg, #64798f 0%, #586C82 45%, #46586c 100%);
+  }
 
   .sidebar{
     width:72px;
@@ -32,21 +41,20 @@
     align-items:center;
     padding-top:16px;
     gap:36px;
-    min-height:100vh;
+    position:sticky;
+    top:0;
+    align-self:flex-start;
+    height:100vh;
   }
   .sidebar .logo-box{
-    width:64px;
-    height:44px;
+    width:52px;
+    background:#0e2037;
+    border:2px solid #f0f0f0;
+    border-radius:2px;
+    overflow:hidden;
     display:flex;
     align-items:center;
     justify-content:center;
-    position:relative;
-  }
-  .sidebar .logo-box .logo-text{
-    color:#f5a623;
-    font-weight:800;
-    font-size:15px;
-    letter-spacing:1px;
   }
   .sidebar-nav{
     display:flex;
@@ -61,11 +69,12 @@
     font-size:11px;
     letter-spacing:2px;
     font-weight:600;
-    color:#64748b;
+    color:#6d7f96;
     position:relative;
-    padding:4px 0;
+    padding:4px 8px 4px 0;
     background:none;
     border:none;
+    border-right:3px solid transparent;
     cursor:pointer;
     text-decoration:none;
   }
@@ -74,25 +83,19 @@
   }
   .sidebar-nav .nav-item.active{
     color:#fff;
-    border-left:3px solid #f5a623;
-    padding-left:10px;
-    margin-left:-13px;
+    border-right-color:#e0a940;
   }
 
   .header-logo-box{
-    width:64px;
-    height:44px;
+    width:70px;
+    border:2px solid #f0f0f0;
+    border-radius:2px;
+    overflow:hidden;
     display:flex;
     align-items:center;
     justify-content:center;
-    position:relative;
   }
-  .header-logo-box .logo-text{
-    color:#f5a623;
-    font-weight:800;
-    font-size:15px;
-    letter-spacing:1px;
-  }
+  body > div.flex{ min-height:100vh; }
 </style>
 </head>
 <body class="bg-bgnavy text-slate-200 min-h-screen">
@@ -114,9 +117,10 @@
   <main class="flex-1 p-6">
 
     <div class="flex items-center justify-between mb-5">
-      <h1 class="text-lg font-bold tracking-wide">
-        <span class="text-accent">|</span> MAINTENANCE
-      </h1>
+      <div class="flex items-center gap-[10px]">
+        <span class="accent-bar"></span>
+        <h1 class="text-[#f0b94a] text-[20px] font-bold tracking-[1.5px] m-0">MAINTENANCE</h1>
+      </div>
       <div class="header-logo-box">
         <img src="<?php echo e(asset('images/logo.png')); ?>" alt="S2P logo" class="w-full h-full object-contain">
       </div>
@@ -141,5 +145,4 @@
 </div>
 
 </body>
-</html>
-<?php /**PATH C:\Users\ASUS\Downloads\ProjekS2P_DashboardBoiler-fixed (3)\ProjekS2P_DashboardBoiler-main\resources\views/maintenance/index.blade.php ENDPATH**/ ?>
+</html><?php /**PATH C:\Users\ASUS\Downloads\ProjekS2P_DashboardBoiler-fixed (3)\ProjekS2P_DashboardBoiler-main\resources\views/maintenance/index.blade.php ENDPATH**/ ?>
