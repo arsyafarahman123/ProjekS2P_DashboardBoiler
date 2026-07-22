@@ -12,6 +12,8 @@ class DashboardController extends Controller
     public function index()
     {
         $years = BoilerTube::YEARS;
+        $defaultUnit = BoilerTube::UNITS[0];
+        $defaultYear = (int) end($years);
 
         return view('dashboard', [
             'units' => BoilerTube::UNITS,
@@ -19,8 +21,9 @@ class DashboardController extends Controller
             'sections' => BoilerTube::sections(),
             'sectionLayout' => BoilerTube::SECTION_LAYOUT,
             'statusColor' => BoilerTube::STATUS_COLOR,
-            'defaultUnit' => BoilerTube::UNITS[0],
-            'defaultYear' => end($years),
+            'defaultUnit' => $defaultUnit,
+            'defaultYear' => $defaultYear,
+            'initialPayload' => $this->buildPayload($defaultUnit, $defaultYear),
         ]);
     }
 
@@ -38,8 +41,15 @@ class DashboardController extends Controller
 
         $unit = $request->query('unit', BoilerTube::UNITS[0]);
         $year = (int) $request->query('year', end($allYears));
-        $sections = BoilerTube::sections();
 
+        return response()->json($this->buildPayload($unit, $year));
+    }
+
+    // Bangun payload data dashboard (dipakai baik untuk render awal via Blade
+    // maupun untuk response JSON /api/boiler-data saat filter unit/tahun berganti).
+    private function buildPayload(string $unit, int $year): array
+    {
+        $sections = BoilerTube::sections();
         $tubes = BoilerTube::where('unit', $unit)->where('year', $year)->get();
 
         // ---- Status & jumlah per section (section_status / section_counts) ----
@@ -96,7 +106,7 @@ class DashboardController extends Controller
             ]);
         }
 
-        return response()->json([
+        return [
             'unit' => $unit,
             'year' => $year,
             'cards' => [
@@ -108,6 +118,6 @@ class DashboardController extends Controller
             'section_summary' => $sectionSummary,
             'comparison' => $comparison,
             'detail' => $detail,
-        ]);
+        ];
     }
 }
