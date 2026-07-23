@@ -19,16 +19,37 @@ class BoilerTube extends Model
 
     // ==== Konfigurasi dasar (setara UNITS / YEARS / SECTION_COUNTS di data_generator.py) ====
 
-    const UNITS = ['Unit 1', 'Unit 2', 'Unit 3'];
+    const UNITS = ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 3A'];
+
+    // Satu-satunya unit yang punya gambar section drawing & data inspeksi.
+    // Unit lain sengaja dibiarkan kosong (tanpa gambar dan tanpa data).
+    const DEFAULT_UNIT = 'Unit 3A';
 
     const YEARS = [2021, 2022, 2023, 2024, 2025];
 
     const SECTION_COUNTS = [
-        'Waterwall'     => 40,
-        'Superheater'   => 24,
-        'Reheater'      => 16,
-        'Economizer'    => 16,
-        'Air Preheater' => 12,
+        'Furnace Bottom Slope'         => 16,
+        'Furnace Waterwall Tube'      => 40,
+        'Platen Superheater'          => 20,
+        'Final Superheater'           => 20,
+        'Low Temperature Superheater' => 20,
+        'Primary Superheater'         => 24,
+        'Secondary Superheater'       => 24,
+        'Economizer'                  => 16,
+        'Sootblower Area'             => 12,
+    ];
+
+    // Kode singkat per section, dipakai untuk tube_id (mis. FBS-U1-01) dan label chart
+    const SECTION_CODES = [
+        'Furnace Bottom Slope'         => 'FBS',
+        'Furnace Waterwall Tube'      => 'FWT',
+        'Platen Superheater'          => 'PLS',
+        'Final Superheater'           => 'FSH',
+        'Low Temperature Superheater' => 'LTS',
+        'Primary Superheater'         => 'PSH',
+        'Secondary Superheater'       => 'SSH',
+        'Economizer'                  => 'ECO',
+        'Sootblower Area'             => 'SBA',
     ];
 
     const STATUS_COLOR = [
@@ -36,20 +57,6 @@ class BoilerTube extends Model
         'Watch'    => '#eab308',
         'Critical' => '#ef4444',
     ];
-
-    // Bounding box tiap section untuk render boiler 3D (persis SECTION_LAYOUT di app.py)
-    const SECTION_LAYOUT = [
-        'Waterwall'     => ['x0' => 0,   'x1' => 3,   'y0' => 0,   'y1' => 3,   'z0' => 0, 'z1' => 10],
-        'Superheater'   => ['x0' => 3.4, 'x1' => 5,   'y0' => 0.5, 'y1' => 2.5, 'z0' => 2, 'z1' => 9],
-        'Reheater'      => ['x0' => 5.2, 'x1' => 6.4, 'y0' => 0.5, 'y1' => 2.5, 'z0' => 2, 'z1' => 9],
-        'Economizer'    => ['x0' => 6.8, 'x1' => 8,   'y0' => 0.3, 'y1' => 2.7, 'z0' => 1, 'z1' => 8],
-        'Air Preheater' => ['x0' => 8.4, 'x1' => 9.8, 'y0' => 0.5, 'y1' => 2.5, 'z0' => 1, 'z1' => 6],
-    ];
-
-    public static function sections(): array
-    {
-        return array_keys(self::SECTION_COUNTS);
-    }
 
     public static function statusFromCreep(float $creep): string
     {

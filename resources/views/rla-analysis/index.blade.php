@@ -168,43 +168,6 @@
     font-weight:600;
   }
 
-  /* STAT CARDS ROW */
-  .stats-row{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:14px;
-  }
-  .stat-card{
-    background:linear-gradient(180deg, rgba(0,26,87,0.25) 0%, rgba(14,32,56,1) 100%);
-    border:1px solid var(--card-border);
-    border-radius:5px;
-    padding:14px 18px;
-  }
-  .stat-card .label{
-    font-size:11px;
-    letter-spacing:1px;
-    color:var(--text-dim);
-    font-weight:700;
-    margin-bottom:8px;
-  }
-  .stat-card .value{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    font-size:20px;
-    font-weight:700;
-  }
-  .stat-card .value .icon{ font-size:18px; line-height:1; }
-  .stat-card.status .value{ color:#00FF41; }
-  @keyframes pulse-glow {
-    0% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); } 70% { box-shadow: 0 0 0 9px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
-  }
-  .pulse-dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#3fdc84; margin-right:6px; animation: pulse-glow 1.8s infinite; }
-  .stat-card.efficiency .value{ color:var(--cyan); }
-  .stat-card.alerts .value{ color:var(--gold-text); }
-  .stat-card.alerts .value .sub{ font-size:13px; color:var(--red); font-weight:600; margin-left:6px; }
-  .stat-card.load .value{ color:var(--cyan); }
-
   /* CONTENT GRID */
   .content-grid{
     display:grid;
@@ -432,7 +395,6 @@
   @media (max-width: 1000px){
     .content-grid{ grid-template-columns:1fr; }
     .bottom-row{ grid-template-columns:1fr; }
-    .stats-row{ grid-template-columns:1fr 1fr; }
   }
 </style>
 </head>
@@ -483,38 +445,6 @@
         </select>
       </div>
     </form>
-
-    <div class="stats-row">
-
-      <div class="stat-card status">
-        <div class="label">OPERATIONAL STATUS</div>
-        <div class="value">
-          <img class="icon" src="{{ asset('images/SVgG.png') }}" alt="" width="18" height="18">
-          <span class="pulse-dot"></span> {{ $data['status'] }}
-        </div>
-      </div>
-      <div class="stat-card efficiency">
-        <div class="label">GLOBAL EFFICIENCY</div>
-        <div class="value">
-          <img class="icon" src="{{ asset('images/thermo.png') }}" alt="" width="18" height="18">
-          {{ $data['efficiency'] }}%
-        </div>
-      </div>
-      <div class="stat-card alerts">
-        <div class="label">ACTIVE ALERTS</div>
-        <div class="value">
-          <img class="icon" src="{{ asset('images/pentung.png') }}" alt="" width="18" height="18">
-          {{ $data['active_alerts'] }} <span class="sub">(Critical: {{ $data['critical_alerts'] }})</span>
-        </div>
-      </div>
-      <div class="stat-card load">
-        <div class="label">BOILER LOAD</div>
-        <div class="value">
-          <img class="icon" src="{{ asset('images/listrik.png') }}" alt="" width="18" height="18">
-          {{ $data['boiler_load'] }}%
-        </div>
-      </div>
-    </div>
 
     <div class="content-grid">
       <div class="panel">

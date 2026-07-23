@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BoilerArea;
 use App\Models\BoilerTube;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -12,14 +13,13 @@ class DashboardController extends Controller
     public function index()
     {
         $years = BoilerTube::YEARS;
-        $defaultUnit = BoilerTube::UNITS[0];
+        $defaultUnit = BoilerTube::DEFAULT_UNIT;
         $defaultYear = (int) end($years);
 
         return view('dashboard', [
             'units' => BoilerTube::UNITS,
             'years' => $years,
-            'sections' => BoilerTube::sections(),
-            'sectionLayout' => BoilerTube::SECTION_LAYOUT,
+            'drawingUnit' => BoilerTube::DEFAULT_UNIT,
             'statusColor' => BoilerTube::STATUS_COLOR,
             'defaultUnit' => $defaultUnit,
             'defaultYear' => $defaultYear,
@@ -39,7 +39,7 @@ class DashboardController extends Controller
 
         $allYears = BoilerTube::YEARS;
 
-        $unit = $request->query('unit', BoilerTube::UNITS[0]);
+        $unit = $request->query('unit', BoilerTube::DEFAULT_UNIT);
         $year = (int) $request->query('year', end($allYears));
 
         return response()->json($this->buildPayload($unit, $year));
@@ -49,20 +49,24 @@ class DashboardController extends Controller
     // maupun untuk response JSON /api/boiler-data saat filter unit/tahun berganti).
     private function buildPayload(string $unit, int $year): array
     {
-        $sections = BoilerTube::sections();
+        // Daftar area/section dinamis per unit (bisa ditambah admin lewat Add Area)
+        $areas = BoilerArea::where('unit', $unit)->orderBy('id')->get();
+        $sections = $areas->pluck('name')->all();
         $tubes = BoilerTube::where('unit', $unit)->where('year', $year)->get();
 
         // ---- Status & jumlah per section (section_status / section_counts) ----
         $sectionSummary = [];
-        foreach ($sections as $section) {
-            $sub = $tubes->where('section', $section);
+        foreach ($areas as $area) {
+            $sub = $tubes->where('section', $area->name);
             $critical = $sub->where('status', 'Critical')->count();
             $watch = $sub->where('status', 'Watch')->count();
             $safe = $sub->where('status', 'Safe')->count();
             $worst = $critical ? 'Critical' : ($watch ? 'Watch' : 'Safe');
 
             $sectionSummary[] = [
-                'section' => $section,
+                'id' => $area->id,
+                'section' => $area->name,
+                'code' => $area->code,
                 'critical' => $critical,
                 'watch' => $watch,
                 'safe' => $safe,

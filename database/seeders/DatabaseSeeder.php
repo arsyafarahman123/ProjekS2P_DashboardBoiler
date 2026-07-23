@@ -9,14 +9,16 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Akun admin untuk fitur Add Area di dashboard (password cast 'hashed' di model User)
+        User::updateOrCreate(
+            ['email' => 'admin@ssprimadaya.co.id'],
+            ['name' => 'Admin', 'password' => 'admin123'],
+        );
 
         $this->call([
             TubeScanSeeder::class,
             BoilerTubeSeeder::class,
+            BoilerAreaSeeder::class,
         ]);
     }
 }

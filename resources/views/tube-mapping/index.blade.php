@@ -27,16 +27,27 @@
   body { font-family: ui-sans-serif, system-ui, sans-serif; }
   .cell { transition: transform .12s ease; }
   .cell:hover { transform: scale(1.15); z-index: 10; position: relative; }
+  .tube-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(34px, 1fr));
+    gap:4px;
+  }
+  .tube-cell{
+    height:32px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:3px;
+    font-weight:600;
+    font-size:11px;
+    cursor:pointer;
+  }
   select option{ color:#1a1a1a; background:#ffffff; font-weight:600; }
   .bg-panel{
     background:linear-gradient(180deg, rgba(0,26,87,0.25) 0%, rgba(14,32,56,1) 100%) !important;
     border:1px solid rgba(255,255,255,0.06);
   }
   .rounded-lg{ border-radius:5px !important; }
-  @keyframes pulse-glow {
-    0% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); } 70% { box-shadow: 0 0 0 9px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
-  }
-  .pulse-dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#3fdc84; margin-right:6px; animation: pulse-glow 1.8s infinite; }
   .accent-bar { width:4px; height:20px; background:#e0a940; border-radius:2px; flex-shrink:0; display:inline-block; }
 
   .sidebar{
@@ -117,6 +128,7 @@
       <a href="{{ route('tube.mapping') }}" class="nav-item active">TUBE MAPPING</a>
       <a href="{{ route('rla-analysis') }}" class="nav-item">RLA ANALYSIS</a>
       <a href="{{ route('maintenance') }}" class="nav-item">MAINTENANCE</a>
+      <a href="{{ route('input-data.index') }}" class="nav-item">INPUT DATA</a>
     </nav>
   </aside>
 
@@ -161,96 +173,48 @@
       </div>
     </form>
 
-    <div class="grid grid-cols-4 gap-4 mb-5">
-      <div class="bg-panel rounded-lg px-4 py-3">
-        <div class="text-[10px] tracking-wider text-slate-400 font-semibold mb-1">OPERATIONAL STATUS</div>
-        <div class="flex items-center gap-2 text-safe font-bold text-lg">
-          <img class="icon" src="{{ asset('images/SVgG.png') }}" alt="" width="18" height="18">
-          <span class="pulse-dot"></span> {{ $summary["operational_status"] }}
-        </div>
-      </div>
-      <div class="bg-panel rounded-lg px-4 py-3">
-        <div class="text-[10px] tracking-wider text-slate-400 font-semibold mb-1">GLOBAL EFFICIENCY</div>
-        <div class="flex items-center gap-2 text-white font-bold text-lg">
-          <img class="icon" src="{{ asset('images/thermo.png') }}" alt="" width="18" height="18">
-          {{ $summary["global_efficiency"] }}%
-        </div>
-      </div>
-      <div class="bg-panel rounded-lg px-4 py-3">
-        <div class="text-[10px] tracking-wider text-slate-400 font-semibold mb-1">ACTIVE ALERTS</div>
-        <div class="flex items-center gap-2 font-bold text-lg">
-          <img class="icon" src="{{ asset('images/pentung.png') }}" alt="" width="18" height="18">
-          <span class="text-white">{{ $summary["active_alerts"] }}</span>
-          <span class="text-critical text-sm font-medium">(Critical: {{ $summary["critical_count"] }})</span>
-        </div>
-      </div>
-      <div class="bg-panel rounded-lg px-4 py-3">
-        <div class="text-[10px] tracking-wider text-slate-400 font-semibold mb-1">BOILER LOAD</div>
-        <div class="flex items-center gap-2 text-white font-bold text-lg">
-          <img class="icon" src="{{ asset('images/listrik.png') }}" alt="" width="18" height="18">
-          {{ $summary["boiler_load"] }}%
-        </div>
-      </div>
-    </div>
-
     <div class="grid grid-cols-3 gap-5 mb-5">
 
       <div class="col-span-2 bg-panel rounded-lg p-4 relative">
-        <div class="text-xs font-bold tracking-wide mb-3">{{ strtoupper($section) }} TUBE INTERACTIVE GRID MAP</div>
-        <div class="overflow-x-auto flex justify-center">
-          <table class="border-collapse text-xs select-none">
-            <thead>
-              <tr>
-                <th class="w-8"></th>
-                @for($c=1;$c<=$maxCol;$c++)
-                  <th class="text-white font-normal px-1.5">{{ $c }}</th>
-                @endfor
-              </tr>
-            </thead>
-            <tbody>
-              @for($r=1;$r<=$maxRow;$r++)
-                <tr>
-                  <td class="text-white pr-1.5">{{ $r }}</td>
-                  @for($c=1;$c<=$maxCol;$c++)
-                    @php $t = $grid[$r][$c] ?? null; @endphp
-                    @if($t)
-                      <td class="p-[2px]">
-                        <button
-                          type="button"
-                          @click="selectTube(@js($t->tube_id), @js($t->material), {{ $t->current_thickness_mm }}, {{ $t->min_design_thickness_mm }}, {{ $t->remaining_life_months }}, {{ $t->creep_pct }}, @js($t->status), {{ $t->corrosion_detected ? "true" : "false" }}, $event)"
-                          class="cell w-8 h-8 flex items-center justify-center rounded-sm font-semibold text-xs text-slate-900
-                            {{ $t->status === "Critical" ? "bg-critical text-white" : ($t->status === "Watch" ? "bg-watch" : "bg-safe") }}">
-                          {{ $c }}
-                        </button>
-                      </td>
-                    @else
-                      <td class="w-8 h-8"></td>
-                    @endif
-                  @endfor
-                </tr>
-              @endfor
-            </tbody>
-          </table>
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div class="text-xs font-bold tracking-wide">PRIMARY SUPERHEATER TUBE MAP — UNIT 3A (TUBE 1&ndash;{{ $pshTotal }})</div>
+          <div class="flex items-center gap-3 text-[10px] text-slate-400">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-safe"></span> SAFE</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-watch"></span> WATCH</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-critical"></span> CRITICAL</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-white/10 border border-white/20"></span> BELUM ADA DATA</span>
+          </div>
+        </div>
+
+        <div class="tube-grid select-none">
+          @for($i=1;$i<=$pshTotal;$i++)
+            @php $pts = $pshPoints->get($i); @endphp
+            <button type="button"
+              @click="selectPshTube({{ $i }}, @js($pts?->map(fn ($m) => $m->thickness_mm)->all()), $event)"
+              class="cell tube-cell bg-white/[0.07] text-slate-500 border border-white/10">
+              {{ $i }}
+            </button>
+          @endfor
         </div>
 
         <div x-show="selected" x-cloak @click.outside="selected=null"
              :style="popupStyle"
              class="absolute w-80 bg-[#0d1830] border border-white/10 rounded-lg shadow-2xl p-4 text-xs z-20">
           <div class="flex justify-between items-start mb-2">
-            <div class="font-bold text-slate-200">SELECTED TUBE: <span x-text="selected?.id"></span></div>
+            <div class="font-bold text-slate-200">
+              TUBE #<span x-text="selected?.no"></span>
+              <span class="text-slate-400" x-text="'(' + selected?.id + ')'"></span>
+            </div>
             <button @click="selected=null" class="text-slate-400 hover:text-white">X</button>
           </div>
           <div class="space-y-1 text-slate-300">
-            <div>MATERIAL: <span class="font-semibold text-white" x-text="selected?.material"></span></div>
-            <div>CURRENT THICKNESS: <span class="font-semibold text-white" x-text="selected?.thickness + 'mm'"></span></div>
-            <div>MIN DESIGN THICKNESS: <span class="font-semibold text-white" x-text="selected?.minThickness + 'mm'"></span></div>
-            <div>REMAINING LIFE: <span class="font-semibold text-white" x-text="selected?.life + ' month(s)'"></span></div>
-            <div>CREEP:
-              <span class="font-semibold" :class="selected?.status==='Critical' ? 'text-critical' : (selected?.status==='Watch' ? 'text-watch' : 'text-safe')"
-                    x-text="selected?.creep + '% (' + selected?.status?.toUpperCase() + ')'"></span>
-            </div>
-            <div>NDT REPORT DETECTED CORROSION/PITTING:
-              <span class="font-semibold text-white" x-text="selected?.corrosion ? 'YA' : 'TIDAK'"></span>
+            <template x-for="p in pointNames()" :key="p">
+              <div>TITIK <span x-text="p"></span>:
+                <span class="font-semibold text-white" x-text="pointValue(p)"></span>
+              </div>
+            </template>
+            <div x-show="!hasValues()" class="text-slate-500 pt-1">
+              Belum ada data pengukuran — akan terisi lewat menu Input Data.
             </div>
           </div>
         </div>
@@ -291,7 +255,8 @@
               <th class="font-normal pb-2">TUBE ID</th>
               <th class="font-normal pb-2">CREEP %</th>
               <th class="font-normal pb-2">SCAN DATE</th>
-              <th class="font-normal pb-2">NDT REPORT CORROSION/PITTING</th>
+              <th class="font-normal pb-2">STATUS</th>
+              <th class="font-normal pb-2">REKOMENDASI</th>
             </tr>
           </thead>
           <tbody class="text-slate-200">
@@ -300,7 +265,12 @@
                 <td class="py-1.5">{{ $h->tube_id }}</td>
                 <td class="py-1.5">{{ $h->creep_pct }}%</td>
                 <td class="py-1.5">{{ $h->scan_date->format("Y-m-d") }}</td>
-                <td class="py-1.5">{{ $h->corrosion_detected ? "Terdeteksi" : "Tidak" }}</td>
+                <td class="py-1.5">
+                  <span class="{{ $h->status === "Critical" ? "text-critical" : ($h->status === "Watch" ? "text-watch" : "text-safe") }} font-semibold">
+                    {{ strtoupper($h->status) }}
+                  </span>
+                </td>
+                <td class="py-1.5">{{ $h->recommended_action }}</td>
               </tr>
             @endforeach
           </tbody>
@@ -341,14 +311,28 @@
 </div>
 
 <script>
+// Susunan titik ukur area Primary Superheater (diatur admin lewat menu Input Data)
+const PSH_POINTS = @json($pshPointNames);
+
 function tubeDashboard() {
   return {
     selected: null,
     popupStyle: '',
     toast: null,
     filterTubeId: '',
-    selectTube(id, material, thickness, minThickness, life, creep, status, corrosion, event) {
-      this.selected = { id, material, thickness, minThickness, life, creep, status, corrosion };
+    pointNames() {
+      return PSH_POINTS;
+    },
+    pointValue(p) {
+      const v = this.selected?.points?.[p];
+      return v == null ? '-' : v + ' mm';
+    },
+    hasValues() {
+      const pts = this.selected?.points || {};
+      return Object.values(pts).some(v => v != null);
+    },
+    selectPshTube(no, points, event) {
+      this.selected = { no, id: 'PSH-U3A-' + String(no).padStart(2, '0'), points };
 
       const btn = event.currentTarget;
       const container = btn.closest('.relative');
@@ -357,7 +341,7 @@ function tubeDashboard() {
       const btnRect = btn.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
       const popupWidth = 320;   // sesuai w-80
-      const popupHeightEstimate = 190;
+      const popupHeightEstimate = 160;
 
       let left = (btnRect.left - containerRect.left) + (btnRect.width / 2) - (popupWidth / 2);
       left = Math.max(8, Math.min(left, container.clientWidth - popupWidth - 8));

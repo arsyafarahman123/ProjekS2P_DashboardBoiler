@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <title>S2P PLTU Cilacap — Boiler 3D Digital Twin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
@@ -116,18 +117,6 @@
         width:100%; height:auto; object-fit:contain; display:block;
     }
     .glow-orb { position:absolute; border-radius:50%; filter: blur(60px); pointer-events:none; z-index:0; }
-    .stat-card { transition: transform .18s ease, background .18s ease, box-shadow .18s ease; border-radius:5px; position:relative;
-        background: linear-gradient(180deg, rgba(0,26,87,0.25) 0%, rgba(14,32,56,1) 100%);
-        border:1px solid rgba(255,255,255,0.06); padding:14px 18px; color:white; min-height:64px;
-        display:flex; flex-direction:row; align-items:center; gap:14px; }
-    .stat-icon { flex-shrink:0; display:flex; align-items:center; justify-content:center; opacity:.95; }
-    .stat-content { display:flex; flex-direction:column; }
-    .stat-label { color:#9fb0c3; font-size:11px; font-weight:700; letter-spacing:1px; margin-bottom:8px; display:flex; align-items:center; }
-    .stat-value { font-size:20px; font-weight:700; font-family:inherit; display:flex; align-items:center; }
-    @keyframes pulse-glow {
-        0% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); } 70% { box-shadow: 0 0 0 9px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
-    }
-    .pulse-dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#3fdc84; margin-right:6px; animation: pulse-glow 1.8s infinite; }
     .brand-badge { background: linear-gradient(135deg,#e0a940,#a97e1f); border:1px solid #f0c46a; border-radius:10px; padding:6px 14px;
         color:#2a1a00; font-weight:800; font-size:11px; letter-spacing:1px; box-shadow: 0 3px 12px #e0a94044; }
     select.filter-select {
@@ -144,6 +133,13 @@
     .panel-title { color:white; font-weight:700; font-size:12px; letter-spacing:1.5px; margin-bottom:10px; font-family:inherit; }
     .risk-row { display:flex; align-items:center; gap:10px; padding:8px 6px; border-bottom:1px solid #16324a; cursor:pointer; border-radius:6px; }
     .risk-row:hover { background: rgba(245,179,1,.06); }
+    .risk-row.active { background: rgba(245,179,1,.12); box-shadow: inset 0 0 0 1px #e0a94088; }
+    .area-del-btn {
+        margin-left:auto; flex-shrink:0; background:none; border:none; cursor:pointer;
+        color:#6d7f96; font-size:13px; font-weight:700; padding:2px 7px; border-radius:4px;
+        font-family:inherit; line-height:1;
+    }
+    .area-del-btn:hover { color:#fff; background:#e5484d; }
     details > summary { list-style:none; cursor:pointer; }
     details > summary::-webkit-details-marker { display:none; }
     .detail-panel { margin-bottom:12px; border:1px solid #1c3a5c; border-radius:18px; box-shadow: 0 4px 18px rgba(0,0,0,0.35); padding:16px 20px;
@@ -156,7 +152,13 @@
     table.tube-table th { padding:8px 10px; color:#9fb0c3; font-size:11px; text-align:left; border-bottom:1px solid #1c3a5c; position:sticky; top:0; background:#0d2140; }
     table.tube-table td { padding:7px 10px; color:white; font-size:12.5px; border-bottom:1px solid #16324a; }
     .table-scroll { max-height:360px; overflow-y:auto; border-radius:8px; }
-    #boiler-3d, #risk-bar, #comparison-fig { width:100%; max-width:100%; }
+    #risk-bar, #comparison-fig { width:100%; max-width:100%; }
+    /* Field PDF mengikuti proporsi halaman PDF (2384 x 3370 pt) supaya seluruh gambar terlihat */
+    #boiler-pdf {
+        width:100%; max-width:100%;
+        aspect-ratio: 2384 / 3370;
+        border:0; border-radius:4px; display:block; background:#0d2140;
+    }
 </style>
 </head>
 <body>
@@ -221,20 +223,45 @@
                         @endforeach
                     </select>
                 </div>
+                <div style="margin-left:auto;display:flex;align-items:center;gap:14px;">
+                    @auth
+                        <span style="color:#9fb0c3;font-size:11.5px;font-weight:600;">👤 {{ auth()->user()->name }}</span>
+                        <form method="POST" action="{{ route('logout') }}" style="margin:0;">
+                            @csrf
+                            <button type="submit" style="background:none;border:1px solid rgba(255,255,255,0.18);border-radius:3px;color:#9fb0c3;font-size:11px;font-weight:700;letter-spacing:1px;padding:5px 12px;cursor:pointer;font-family:inherit;">LOGOUT</button>
+                        </form>
+                    @else
+                        <a href="{{ route('login') }}" style="color:#8fb4d6;font-size:11px;font-weight:700;letter-spacing:1px;text-decoration:none;border:1px solid rgba(255,255,255,0.18);border-radius:3px;padding:6px 12px;">ADMIN LOGIN</a>
+                    @endauth
+                </div>
             </div>
 
-            <div id="status-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;position:relative;z-index:1;">
-                <div style="grid-column:1/-1;padding:20px;text-align:center;color:#9fb0c3;font-size:12px;letter-spacing:1px;">Loading data...</div>
-            </div>
+            <div id="error-box" style="position:relative;z-index:1;"></div>
         </div>
 
         <div class="section-block">
-            <div style="display:flex;gap:16px;align-items:stretch;flex-wrap:wrap;position:relative;z-index:1;">
+            <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;position:relative;z-index:1;">
                 <div style="flex:1.4;min-width:420px;background:linear-gradient(180deg, rgba(0,26,87,0.25) 0%, rgba(14,32,56,1) 100%);border:1px solid rgba(255,255,255,0.06);border-radius:5px;padding:14px;box-shadow:0 6px 20px rgba(0,0,0,.3);">
-                    <div id="boiler-3d"></div>
+                    <iframe id="boiler-pdf"
+                        src="{{ asset('images/'.rawurlencode('F2092S-J0203-05 R1 SECTION VIEW DRAWING OF BOILER HOUSE.pdf')) }}#toolbar=0&navpanes=0&view=Fit"
+                        title="Section View Drawing of Boiler House"></iframe>
+                    <div id="drawing-empty" style="display:none;align-items:center;justify-content:center;min-height:320px;color:#5d7590;font-size:12.5px;letter-spacing:1px;"></div>
                 </div>
                 <div style="flex:1;min-width:340px;background:linear-gradient(180deg, rgba(0,26,87,0.25) 0%, rgba(14,32,56,1) 100%);border:1px solid rgba(255,255,255,0.06);border-radius:5px;padding:14px;box-shadow:0 6px 20px rgba(0,0,0,.3);">
-                    <div class="panel-title">📊 Risk Summary by Section</div>
+                    <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                        <span>📊 Risk Summary by Section</span>
+                        @auth
+                        <button id="add-area-btn" style="background:linear-gradient(135deg,#e0a940,#a97e1f);border:none;border-radius:3px;color:#2a1a00;font-size:11px;font-weight:800;letter-spacing:.5px;padding:5px 12px;cursor:pointer;font-family:inherit;">＋ ADD AREA</button>
+                        @endauth
+                    </div>
+                    @auth
+                    <div id="add-area-form" style="display:none;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;background:rgba(224,169,64,.07);border:1px solid #e0a94055;border-radius:6px;padding:10px;">
+                        <input id="add-area-name" type="text" maxlength="100" placeholder="Nama area baru untuk unit terpilih..."
+                            style="flex:1;min-width:180px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:3px;color:#eef2f6;font-size:12.5px;padding:7px 10px;font-family:inherit;">
+                        <button id="add-area-save" style="background:#e0a940;border:none;border-radius:3px;color:#2a1a00;font-size:11.5px;font-weight:800;padding:7px 14px;cursor:pointer;font-family:inherit;">SIMPAN</button>
+                        <div id="add-area-msg" style="width:100%;color:#fda4af;font-size:11.5px;"></div>
+                    </div>
+                    @endauth
                     <div id="risk-list" style="margin-bottom:8px;color:#9fb0c3;font-size:12px;">Loading data...</div>
                     <div id="risk-bar"></div>
                     <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;
@@ -272,157 +299,15 @@
 
 <script>
 // ================= Konfigurasi dari server =================
-const SECTIONS = @json($sections);
-const SECTION_LAYOUT = @json($sectionLayout);
 const STATUS_COLOR = @json($statusColor);
 const INITIAL_PAYLOAD = @json($initialPayload);
-const STEEL = '#5b7a99';
+// Hanya unit ini yang punya gambar section drawing; unit lain panelnya dibiarkan kosong
+const DRAWING_UNIT = @json($drawingUnit);
+// Status login admin (menentukan tombol hapus area di daftar Risk Summary)
+const IS_ADMIN = @json(auth()->check());
+const AREA_BASE_URL = @json(url('/admin/areas'));
+// Section yang sedang difokuskan lewat klik di daftar Risk Summary (null = tampilkan semua)
 let focusedSection = null;
-
-// ================= Helper vektor (port dari numpy) =================
-function vsub(a,b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
-function vadd(a,b){ return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
-function vscale(a,s){ return [a[0]*s, a[1]*s, a[2]*s]; }
-function vnorm(a){ return Math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]); }
-function vcross(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
-function vunit(a){ const n = vnorm(a) || 1e-9; return [a[0]/n, a[1]/n, a[2]/n]; }
-function linspace(a,b,n,endpoint=true){
-    if(n===1) return [a];
-    const step = endpoint ? (b-a)/(n-1) : (b-a)/n;
-    const out = [];
-    for(let i=0;i<n;i++) out.push(a+step*i);
-    return out;
-}
-
-// ================= Builder geometri 3D (port dari make_cylinder dkk) =================
-function makeCylinder(p0,p1,r0,r1,color,name,nTheta=10,opacity=0.95,caps=true){
-    const axis = vsub(p1,p0);
-    let length = vnorm(axis);
-    let u;
-    if(length < 1e-9){ u=[0,0,1]; length=1e-6; } else { u = vscale(axis, 1/length); }
-    const tmp = Math.abs(u[0]) < 0.9 ? [1,0,0] : [0,1,0];
-    let v1 = vunit(vcross(u, tmp));
-    let v2 = vcross(u, v1);
-    const thetas = linspace(0, 2*Math.PI, nTheta, false);
-    const dirs = thetas.map(t => [
-        Math.cos(t)*v1[0] + Math.sin(t)*v2[0],
-        Math.cos(t)*v1[1] + Math.sin(t)*v2[1],
-        Math.cos(t)*v1[2] + Math.sin(t)*v2[2],
-    ]);
-    const bottom = dirs.map(d => vadd(p0, vscale(d, r0)));
-    const top = dirs.map(d => vadd(p1, vscale(d, r1)));
-    let verts = bottom.concat(top);
-    const n = nTheta;
-    let ii=[], jj=[], kk=[];
-    for(let idx=0; idx<n; idx++){
-        const a=idx, b=(idx+1)%n, c=idx+n, d=((idx+1)%n)+n;
-        ii.push(a,a); jj.push(b,d); kk.push(d,c);
-    }
-    if(caps){
-        const cb = verts.length, ct = verts.length+1;
-        verts.push(p0, p1);
-        for(let idx=0; idx<n; idx++){
-            const a=idx, b=(idx+1)%n;
-            ii.push(cb); jj.push(b); kk.push(a);
-            const a2=idx+n, b2=((idx+1)%n)+n;
-            ii.push(ct); jj.push(a2); kk.push(b2);
-        }
-    }
-    return {
-        type:'mesh3d',
-        x: verts.map(v=>v[0]), y: verts.map(v=>v[1]), z: verts.map(v=>v[2]),
-        i: ii, j: jj, k: kk,
-        color, opacity, name, flatshading:true, hoverinfo:'name',
-        lighting:{ambient:0.55, diffuse:0.7, specular:0.4, roughness:0.45, fresnel:0.1},
-    };
-}
-
-function makeTubeGrid(l, color, name, nCols=3, nRows=4, radius=0.11){
-    const traces = [];
-    const xs = nCols>1 ? linspace(l.x0+(l.x1-l.x0)*0.15, l.x1-(l.x1-l.x0)*0.15, nCols) : [(l.x0+l.x1)/2];
-    const zs = linspace(l.z0+(l.z1-l.z0)*0.08, l.z1-(l.z1-l.z0)*0.08, nRows);
-    zs.forEach(zc => xs.forEach(xc => {
-        traces.push(makeCylinder([xc,l.y0,zc],[xc,l.y1,zc], radius, radius, color, name, 8, 0.95, true));
-    }));
-    return traces;
-}
-
-function makeWaterwall(l, color, name, nPerSide=6, radius=0.055){
-    const traces = [];
-    let pts = [];
-    linspace(l.x0, l.x1, nPerSide, false).forEach(t => pts.push([t, l.y0]));
-    linspace(l.y0, l.y1, nPerSide, false).forEach(t => pts.push([l.x1, t]));
-    linspace(l.x1, l.x0, nPerSide, false).forEach(t => pts.push([t, l.y1]));
-    linspace(l.y1, l.y0, nPerSide, false).forEach(t => pts.push([l.x0, t]));
-    pts.forEach(([px,py]) => {
-        traces.push(makeCylinder([px,py,l.z0],[px,py,l.z1], radius, radius, color, name, 6, 0.95, false));
-    });
-    return traces;
-}
-
-function makeAirPreheater(l, color, name){
-    const cx = (l.x0+l.x1)/2, cz = (l.z0+l.z1)/2;
-    const r = Math.min(l.x1-l.x0, l.z1-l.z0)/2*0.92;
-    const traces = [makeCylinder([cx,l.y0,cz],[cx,l.y1,cz], r, r, color, name, 18, 0.95, true)];
-    let sx=[], sy=[], sz=[];
-    [l.y0, l.y1].forEach(yc => {
-        linspace(0, 2*Math.PI, 8, false).forEach(ang => {
-            sx.push(cx, cx+r*Math.cos(ang), null);
-            sy.push(yc, yc, null);
-            sz.push(cz, cz+r*Math.sin(ang), null);
-        });
-    });
-    traces.push({type:'scatter3d', mode:'lines', x:sx, y:sy, z:sz, line:{color:'#0a1826', width:3}, hoverinfo:'skip', showlegend:false});
-    return traces;
-}
-
-function makeDuct(p0, p1, radius=0.22){
-    return makeCylinder(p0, p1, radius, radius, STEEL, 'Ducting', 10, 0.9, true);
-}
-
-function buildBoiler3D(colorsBySection){
-    const L = SECTION_LAYOUT['Waterwall'], S = SECTION_LAYOUT['Superheater'], R = SECTION_LAYOUT['Reheater'],
-          E = SECTION_LAYOUT['Economizer'], A = SECTION_LAYOUT['Air Preheater'];
-    let traces = [];
-    traces.push(makeCylinder([5.3,1.5,-0.35],[5.3,1.5,-0.3], 6.4, 6.4, '#1c3d5f', 'Ground', 24, 0.85, true));
-
-    traces = traces.concat(makeWaterwall(L, colorsBySection['Waterwall'], 'Waterwall', 5, 0.32));
-    traces.push(makeCylinder([L.x0-0.25,1.5,L.z1+0.6],[L.x1+0.25,1.5,L.z1+0.6], 0.55, 0.55, STEEL, 'Steam Drum', 14, 0.95, true));
-
-    [['Superheater',S,3,3,0.4], ['Reheater',R,2,3,0.4], ['Economizer',E,2,3,0.34]].forEach(([name,layout,nc,nr,rad]) => {
-        traces = traces.concat(makeTubeGrid(layout, colorsBySection[name], name, nc, nr, rad));
-    });
-
-    traces = traces.concat(makeAirPreheater(A, colorsBySection['Air Preheater'], 'Air Preheater'));
-
-    traces.push(makeCylinder([10.6,1.5,0],[10.6,1.5,9.5], 0.55, 0.42, '#8a97a3', 'Cerobong', 16, 0.95, true));
-    traces.push(makeCylinder([10.6,1.5,9.5],[10.6,1.5,9.9], 0.42, 0.5, '#6b7885', 'Cerobong Cap', 16, 0.95, true));
-
-    const midZ = 5.5;
-    traces.push(makeDuct([L.x1,1.5,midZ],[S.x0,1.5,midZ], 0.5));
-    traces.push(makeDuct([S.x1,1.5,midZ],[R.x0,1.5,midZ], 0.45));
-    traces.push(makeDuct([R.x1,1.5,midZ],[E.x0,1.5,midZ], 0.42));
-    traces.push(makeDuct([E.x1,1.5,4.3],[A.x0,1.5,3.5], 0.4));
-    traces.push(makeDuct([A.x1,1.5,3.5],[10.6,1.5,4], 0.42));
-
-    Object.entries(SECTION_LAYOUT).forEach(([section, layout]) => {
-        const cx = (layout.x0+layout.x1)/2;
-        traces.push({type:'scatter3d', mode:'text', x:[cx], y:[layout.y1+0.4], z:[layout.z1+0.6],
-            text:[section.toUpperCase()], textfont:{color:'white', size:11}, showlegend:false, hoverinfo:'skip'});
-    });
-
-    const layout = {
-        scene:{
-            xaxis:{title:'', showbackground:false, showticklabels:false, showgrid:false, zeroline:false},
-            yaxis:{title:'', showbackground:false, visible:false},
-            zaxis:{title:'Tinggi (m)', showbackground:false, gridcolor:'#1c3a5c', color:'#8fb4d6'},
-            aspectmode:'manual', aspectratio:{x:1.9,y:1.0,z:1.3},
-            camera:{eye:{x:0.75,y:0.75,z:0.45}}, bgcolor:'#0d2140',
-        },
-        margin:{l:0,r:0,t:10,b:0}, paper_bgcolor:'#0d2140', font:{color:'white'}, height:460, showlegend:false,
-    };
-    return {traces, layout};
-}
 
 // ================= Chart 2D (port build_risk_summary_fig & build_comparison_fig) =================
 function buildRiskBar(sectionSummary){
@@ -432,7 +317,9 @@ function buildRiskBar(sectionSummary){
         const key = status.toLowerCase();
         const y = sectionSummary.map(s => s[key]);
         return {
-            type:'bar', x: sectionSummary.map(s => s.section), y, name: status,
+            type:'bar', x: sectionSummary.map(s => s.code), y, name: status,
+            customdata: sectionSummary.map(s => s.section),
+            hovertemplate: '%{customdata}<br>' + status + ': %{y}<extra></extra>',
             marker:{color: STATUS_COLOR[status]},
             text: y.map(v => v>0 ? String(v) : ''), textposition:'inside', insidetextanchor:'middle',
             textangle:0, constraintext:'none',
@@ -446,7 +333,7 @@ function buildRiskBar(sectionSummary){
         legend:{orientation:'h', y:1.18, font:{size:10}},
         xaxis:{showgrid:false, tickfont:{color:'#d7e4f0', size:12, weight:700}, automargin:true},
         yaxis:{showgrid:true, gridcolor:'#1c3a5c', tickfont:{color:'#9fc0dc', size:11}, automargin:true},
-        bargap:0.35,
+        bargap: sectionSummary.length <= 2 ? 0.65 : 0.35,
     };
     return {traces, layout};
 }
@@ -473,58 +360,17 @@ function buildComparisonChart(comparison){
     return {traces, layout};
 }
 
-// ================= Render DOM (port html.Div cards / risk-list) =================
-function renderCards(cards){
-    const el = document.getElementById('status-cards');
-    const alertColor = '#e5484d';
-
-    const icons = {
-        pulse: `<img class="icon" src="{{ asset('images/SVgG.png') }}" alt="" width="18" height="18">`,
-        gauge: `<img class="icon" src="{{ asset('images/thermo.png') }}" alt="" width="18" height="18">`,
-        warning: `<img class="icon" src="{{ asset('images/pentung.png') }}" alt="" width="18" height="18">`,
-        bolt: `<img class="icon" src="{{ asset('images/listrik.png') }}" alt="" width="18" height="18">`,
-    };
-
-    el.innerHTML = `
-        <div class="stat-card">
-            <div class="stat-icon" style="color:#3fdc84;">${icons.pulse}</div>
-            <div class="stat-content">
-                <div class="stat-label">OPERATIONAL STATUS</div>
-                <div class="stat-value" style="color:#3fdc84;"><span class="pulse-dot"></span>ACTIVE</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="color:#7fd4e8;">${icons.gauge}</div>
-            <div class="stat-content">
-                <div class="stat-label">GLOBAL EFFICIENCY</div>
-                <div class="stat-value" style="color:#7fd4e8;">${cards.efficiency}%</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="color:#e0a940;">${icons.warning}</div>
-            <div class="stat-content">
-                <div class="stat-label">ACTIVE ALERTS</div>
-                <div class="stat-value" style="color:#e0a940;">${cards.critical_count + cards.watch_count} <span style="color:${alertColor};font-size:13px;font-weight:700;margin-left:6px;">(Critical: ${cards.critical_count})</span></div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="color:#7fd4e8;">${icons.bolt}</div>
-            <div class="stat-content">
-                <div class="stat-label">BOILER LOAD</div>
-                <div class="stat-value" style="color:#7fd4e8;">${cards.load}%</div>
-            </div>
-        </div>`;
-}
-
+// ================= Render DOM (port risk-list) =================
 function renderRiskList(sectionSummary){
     const el = document.getElementById('risk-list');
     el.innerHTML = sectionSummary.map(s => `
-        <div class="risk-row" data-section="${s.section}">
+        <div class="risk-row ${s.section === focusedSection ? 'active' : ''}" data-section="${s.section}" title="Klik untuk tampilkan section ini saja di grafik (klik lagi untuk semua)">
             <div style="width:10px;height:10px;border-radius:3px;background:${s.color};flex-shrink:0;"></div>
-            <div>
-                <span style="color:white;font-weight:700;font-size:12.5px;">${s.section.toUpperCase()}</span>
+            <div style="flex:1;">
+                <span style="color:white;font-weight:700;font-size:12.5px;">${escapeHtml(s.section.toUpperCase())}</span>
                 <span style="color:#8fb4d6;font-size:12px;"> — ${s.critical} critical tubes, ${s.watch} watch</span>
             </div>
+            ${IS_ADMIN ? `<button class="area-del-btn" data-area-id="${s.id}" title="Hapus area ini">✕</button>` : ''}
         </div>`).join('');
 }
 
@@ -571,22 +417,30 @@ function escapeHtml(str){
 }
 
 function showError(html){
-    const el = document.getElementById('status-cards');
-    el.innerHTML = `<div style="grid-column:1/-1;background:#3a1414;border:1px solid #e5484d;border-radius:12px;padding:16px;color:#fecaca;font-size:13px;">
+    const el = document.getElementById('error-box');
+    el.innerHTML = `<div style="background:#3a1414;border:1px solid #e5484d;border-radius:12px;padding:16px;color:#fecaca;font-size:13px;">
         <strong style="color:#e5484d;">⚠️ Dashboard gagal load data</strong><br>${html}
     </div>`;
 }
 
-function render(payload){
-    renderCards(payload.cards);
-
-    const colorsBySection = {};
-    payload.section_summary.forEach(s => colorsBySection[s.section] = s.color);
-    const boiler = buildBoiler3D(colorsBySection);
-    Plotly.newPlot('boiler-3d', boiler.traces, boiler.layout, {displaylogo:false, responsive:true});
-
-    const riskBar = buildRiskBar(payload.section_summary);
+// Render ulang chart Risk Summary sesuai section yang difokuskan (semua kalau tidak ada)
+function renderRiskBar(payload){
+    const summary = focusedSection
+        ? payload.section_summary.filter(s => s.section === focusedSection)
+        : payload.section_summary;
+    const riskBar = buildRiskBar(summary);
     Plotly.newPlot('risk-bar', riskBar.traces, riskBar.layout, {displaylogo:false, responsive:true});
+}
+
+function render(payload){
+    document.getElementById('error-box').innerHTML = '';
+
+    // Gambar section drawing hanya tampil untuk DRAWING_UNIT; unit lain panelnya kosong
+    const hasDrawing = payload.unit === DRAWING_UNIT;
+    document.getElementById('boiler-pdf').style.display = hasDrawing ? 'block' : 'none';
+    document.getElementById('drawing-empty').style.display = hasDrawing ? 'none' : 'flex';
+
+    renderRiskBar(payload);
 
     renderRiskList(payload.section_summary);
 
@@ -596,7 +450,7 @@ function render(payload){
 
     // Pastikan semua chart pas dengan lebar container-nya (fix chart yang kepotong/meluber)
     requestAnimationFrame(() => {
-        ['boiler-3d','risk-bar','comparison-fig'].forEach(id => {
+        ['risk-bar','comparison-fig'].forEach(id => {
             const el = document.getElementById(id);
             if (el) Plotly.Plots.resize(el);
         });
@@ -604,7 +458,7 @@ function render(payload){
 }
 
 window.addEventListener('resize', () => {
-    ['boiler-3d','risk-bar','comparison-fig'].forEach(id => {
+    ['risk-bar','comparison-fig'].forEach(id => {
         const el = document.getElementById(id);
         if (el && el.data) Plotly.Plots.resize(el);
     });
@@ -612,6 +466,90 @@ window.addEventListener('resize', () => {
 
 document.getElementById('unit-dd').addEventListener('change', loadData);
 document.getElementById('year-dd').addEventListener('change', loadData);
+
+// ================= Admin: Add Area (hanya dirender kalau login) =================
+const addAreaBtn = document.getElementById('add-area-btn');
+if (addAreaBtn) {
+    const formEl = document.getElementById('add-area-form');
+    const nameEl = document.getElementById('add-area-name');
+    const msgEl = document.getElementById('add-area-msg');
+
+    async function submitArea(){
+        const name = nameEl.value.trim();
+        if (!name) { msgEl.textContent = 'Nama area tidak boleh kosong.'; return; }
+        const unit = document.getElementById('unit-dd').value;
+        try {
+            const res = await fetch(@json(route('areas.store')), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                body: JSON.stringify({unit, name}),
+            });
+            const body = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                msgEl.textContent = body.message || `Gagal menambah area (status ${res.status}).`;
+                return;
+            }
+            nameEl.value = '';
+            msgEl.textContent = '';
+            formEl.style.display = 'none';
+            loadData(); // refresh daftar & chart supaya area baru langsung tampil
+        } catch (err) {
+            msgEl.textContent = 'Gagal menambah area: ' + err.message;
+        }
+    }
+
+    addAreaBtn.addEventListener('click', () => {
+        const open = formEl.style.display !== 'none';
+        formEl.style.display = open ? 'none' : 'flex';
+        if (!open) nameEl.focus();
+    });
+    document.getElementById('add-area-save').addEventListener('click', submitArea);
+    nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') submitArea(); });
+}
+
+// Hapus area (khusus admin): konfirmasi dulu, data tube area itu ikut terhapus
+async function deleteArea(areaId){
+    if (!lastPayload) return;
+    const s = lastPayload.section_summary.find(x => x.id === areaId);
+    if (!s) return;
+    const extra = s.total > 0 ? `\nSemua data tube area ini (${s.total} tube) ikut terhapus.` : '';
+    if (!confirm(`Hapus area "${s.section}" dari ${lastPayload.unit}?${extra}`)) return;
+    try {
+        const res = await fetch(`${AREA_BASE_URL}/${areaId}`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            },
+        });
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            alert(body.message || `Gagal menghapus area (status ${res.status}).`);
+            return;
+        }
+        if (focusedSection === s.section) focusedSection = null;
+        loadData(); // refresh daftar & chart
+    } catch (err) {
+        alert('Gagal menghapus area: ' + err.message);
+    }
+}
+
+// Klik baris section di Risk Summary -> grafik hanya menampilkan section itu.
+// Klik section yang sama sekali lagi -> kembali menampilkan semua section.
+// Klik tombol ✕ (admin) -> hapus area tersebut.
+document.getElementById('risk-list').addEventListener('click', e => {
+    const delBtn = e.target.closest('.area-del-btn');
+    if (delBtn) { deleteArea(Number(delBtn.dataset.areaId)); return; }
+    const row = e.target.closest('.risk-row');
+    if (!row || !lastPayload) return;
+    focusedSection = (focusedSection === row.dataset.section) ? null : row.dataset.section;
+    renderRiskList(lastPayload.section_summary);
+    renderRiskBar(lastPayload);
+});
 
 // Render data awal langsung dari payload yang sudah disiapkan server (tanpa fetch),
 // biar nggak ada jeda "Loading data..." pas pertama kali halaman dibuka.
