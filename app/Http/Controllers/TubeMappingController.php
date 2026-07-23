@@ -34,15 +34,29 @@ class TubeMappingController extends Controller
         $watchCount = $tubes->where("status", "Watch")->count();
         $criticalCount = $tubes->where("status", "Critical")->count();
 
+        // Dihitung dari data tube yang sedang difilter (unit/section/tahun),
+        // bukan angka tetap, supaya berubah mengikuti pilihan dropdown.
+        $avgCreep = $total ? (float) $tubes->avg("creep_pct") : 0;
+        $criticalRatio = $total ? $criticalCount / $total : 0;
+        $watchRatio = $total ? $watchCount / $total : 0;
+
+        $globalEfficiency = 100 - ($avgCreep * 0.5) - ($criticalRatio * 20) - ($watchRatio * 5);
+        $globalEfficiency = round(max(60, min(99.9, $globalEfficiency)), 1);
+
+        $boilerLoad = 100 - ($criticalRatio * 25) - ($avgCreep * 0.15);
+        $boilerLoad = round(max(55, min(99, $boilerLoad)));
+
+        $operationalStatus = $criticalRatio > 0.15 ? "WARNING" : ($total ? "ACTIVE" : "NO DATA");
+
         $summary = [
             "safe_pct" => $total ? round($safeCount / $total * 100) : 0,
             "watch_pct" => $total ? round($watchCount / $total * 100) : 0,
             "critical_pct" => $total ? round($criticalCount / $total * 100) : 0,
             "critical_count" => $criticalCount,
             "active_alerts" => $watchCount ? $criticalCount + 2 : $criticalCount,
-            "global_efficiency" => 88.5,
-            "boiler_load" => 92,
-            "operational_status" => "ACTIVE",
+            "global_efficiency" => $globalEfficiency,
+            "boiler_load" => $boilerLoad,
+            "operational_status" => $operationalStatus,
         ];
 
         $topPriority = TubeScan::query()
@@ -86,7 +100,6 @@ class TubeMappingController extends Controller
             "unit", "section", "year"
         ));
     }
-
     public function show(string $tubeId)
     {
         $tube = TubeScan::where("tube_id", $tubeId)->orderByDesc("year")->firstOrFail();
