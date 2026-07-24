@@ -1,0 +1,108 @@
+/*
+  dashboard-shared.css
+  Shared styles used by every dashboard page (Global View, Tube Mapping,
+  RLA Analysis, Maintenance, Input Data). This is the SINGLE source of
+  truth for the sidebar/logo/nav — edit here once, it applies everywhere.
+
+  Each page keeps its own page-specific <style> block (charts, tables,
+  panels, etc.) since those are genuinely different per page. Only the
+  parts that were previously copy-pasted identically into every blade
+  file live here now.
+*/
+
+.layout{
+  display:flex;
+  min-height:100vh;
+}
+
+/* SIDEBAR */
+.sidebar{
+  width:72px;
+  min-width:72px;
+  background:linear-gradient(180deg, #0a1729 0%, #0d2038 100%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding-top:14px;
+  padding-bottom:14px;
+  gap:32px;
+  position:sticky;
+  top:0;
+  align-self:flex-start;
+  height:100vh;
+  overflow-y:auto;
+  overflow-x:hidden;
+  scrollbar-width:thin;
+  scrollbar-color:#2a4a6e transparent;
+}
+.sidebar::-webkit-scrollbar{ width:4px; }
+.sidebar::-webkit-scrollbar-thumb{ background:#2a4a6e; border-radius:4px; }
+
+.sidebar .logo-box{
+  width:52px;
+  height:52px;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+}
+.sidebar .logo-box img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+}
+
+.sidebar-nav{
+  display:flex;
+  flex-direction:column;
+  gap:26px;
+  margin-top:14px;
+  align-items:center;
+  padding-bottom:12px;
+}
+.sidebar-nav .nav-item{
+  writing-mode:vertical-rl;
+  transform:rotate(180deg);
+  font-size:10px;
+  letter-spacing:1.5px;
+  font-weight:600;
+  color:#6d7f96;
+  position:relative;
+  min-height:96px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 8px 0 0;
+  background:none;
+  border:none;
+  border-right:3px solid transparent;
+  cursor:pointer;
+  text-decoration:none;
+}
+.sidebar-nav .nav-item:hover{
+  color:#cbd5e1;
+}
+.sidebar-nav .nav-item.active{
+  color:#fff;
+  border-right-color:#e0a940;
+}
+
+/* ============================================================
+   MAIN CONTENT WRAPPER
+   Single source of truth for the outer content padding/background
+   used by every dashboard page (Global View, Tube Mapping, RLA,
+   Maintenance, Input Data). Previously each page had its own copy
+   with slightly different values (some used Tailwind p-6 = 24px
+   uniform, others used 22px 26px), which is why the spacing looked
+   inconsistent between pages. Edit here once, applies everywhere.
+   ============================================================ */
+.main{
+  flex:1;
+  position:relative;
+  min-height:100vh;
+  background:linear-gradient(120deg, #64798f 0%, #586C82 45%, #46586c 100%);
+  padding:22px 26px;
+  overflow:hidden;
+}
