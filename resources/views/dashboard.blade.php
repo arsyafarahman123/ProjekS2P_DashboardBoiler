@@ -30,10 +30,18 @@
         display:flex;
         flex-direction:column;
         align-items:center;
-        padding-top:16px;
-        gap:36px;
+        padding-top:14px;
+        padding-bottom:14px;
+        gap:20px;
         position:sticky; top:0; height:100vh;
+        overflow-y:auto;
+        overflow-x:hidden;
+        scrollbar-width:thin;
+        scrollbar-color:#2a4a6e transparent;
     }
+    .sidebar::-webkit-scrollbar{ width:4px; }
+    .sidebar::-webkit-scrollbar-thumb{ background:#2a4a6e; border-radius:4px; }
+    .sidebar-nav{ padding-bottom:12px; }
     .logo-box .logo-text{
         font-family:'Poppins',sans-serif;
         font-weight:800;
@@ -44,10 +52,12 @@
     }
     .sidebar .logo-box{
         width:52px;
-        background:#0e2037;
-        border:2px solid #f0f0f0;
-        border-radius:2px;
+        height:52px;
         overflow:hidden;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        flex-shrink:0;
     }
     .logo-box img{ 
         width:100%; 
@@ -57,15 +67,15 @@
     } 
     .sidebar-nav{ display:flex; 
         flex-direction:column; 
-        gap:44px; 
-        margin-top:20px; 
+        gap:18px; 
+        margin-top:8px; 
         align-items:center;
     }
     .sidebar-nav .nav-item{
         writing-mode:vertical-rl;
         transform:rotate(180deg);
-        font-size:11px;
-        letter-spacing:2px;
+        font-size:10px;
+        letter-spacing:1.5px;
         font-weight:600;
         color:#6d7f96;
         position:relative;
@@ -110,11 +120,10 @@
         width:70px; flex-shrink:0;
     }
     .header-logo-corner .logo-box{
-        width:70px; height:auto; background:transparent; border:none; border-radius:0;
-        overflow:visible; display:flex; align-items:center; justify-content:center;
+        width:70px; height:70px; overflow:hidden; display:flex; align-items:center; justify-content:center;
     }
     .header-logo-corner .logo-box img{
-        width:100%; height:auto; object-fit:contain; display:block;
+        width:100%; height:100%; object-fit:contain; display:block;
     }
     .glow-orb { position:absolute; border-radius:50%; filter: blur(60px); pointer-events:none; z-index:0; }
     .brand-badge { background: linear-gradient(135deg,#e0a940,#a97e1f); border:1px solid #f0c46a; border-radius:10px; padding:6px 14px;
@@ -183,6 +192,10 @@
 
     <a href="{{ route('maintenance') }}" class="nav-item">
         MAINTENANCE
+    </a>
+
+    <a href="{{ route('input-data.index') }}" class="nav-item">
+        INPUT DATA
     </a>
 
 </div>
@@ -551,9 +564,6 @@ document.getElementById('risk-list').addEventListener('click', e => {
     renderRiskBar(lastPayload);
 });
 
-// Render data awal langsung dari payload yang sudah disiapkan server (tanpa fetch),
-// biar nggak ada jeda "Loading data..." pas pertama kali halaman dibuka.
-// fetch ke /api/boiler-data cuma jalan lagi kalau filter UNIT/TAHUN diganti.
 lastPayload = INITIAL_PAYLOAD;
 render(INITIAL_PAYLOAD);
 </script>

@@ -39,35 +39,42 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    padding-top:16px;
-    gap:36px;
+    padding-top:14px;
+    padding-bottom:14px;
+    gap:20px;
     position:sticky;
     top:0;
     align-self:flex-start;
     height:100vh;
+    overflow-y:auto;
+    overflow-x:hidden;
+    scrollbar-width:thin;
+    scrollbar-color:#2a4a6e transparent;
   }
+  .sidebar::-webkit-scrollbar{ width:4px; }
+  .sidebar::-webkit-scrollbar-thumb{ background:#2a4a6e; border-radius:4px; }
   .sidebar .logo-box{
     width:52px;
-    background:#0e2037;
-    border:2px solid #f0f0f0;
-    border-radius:2px;
+    height:52px;
     overflow:hidden;
     display:flex;
     align-items:center;
     justify-content:center;
+    flex-shrink:0;
   }
   .sidebar-nav{
     display:flex;
     flex-direction:column;
-    gap:44px;
-    margin-top:20px;
+    gap:18px;
+    margin-top:8px;
     align-items:center;
+    padding-bottom:12px;
   }
   .sidebar-nav .nav-item{
     writing-mode:vertical-rl;
     transform:rotate(180deg);
-    font-size:11px;
-    letter-spacing:2px;
+    font-size:10px;
+    letter-spacing:1.5px;
     font-weight:600;
     color:#6d7f96;
     position:relative;
@@ -88,12 +95,12 @@
 
   .header-logo-box{
     width:70px;
-    border:2px solid #f0f0f0;
-    border-radius:2px;
+    height:70px;
     overflow:hidden;
     display:flex;
     align-items:center;
     justify-content:center;
+    flex-shrink:0;
   }
   body > div.flex{ min-height:100vh; }
 </style>
@@ -111,6 +118,7 @@
       <a href="{{ route('tube.mapping') }}" class="nav-item">TUBE MAPPING</a>
       <a href="{{ route('rla-analysis') }}" class="nav-item">RLA ANALYSIS</a>
       <a href="{{ route('maintenance') }}" class="nav-item active">MAINTENANCE</a>
+      <a href="{{ route('input-data.index') }}" class="nav-item">INPUT DATA</a>
     </nav>
   </aside>
 
