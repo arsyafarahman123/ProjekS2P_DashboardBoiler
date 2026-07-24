@@ -11,7 +11,7 @@ class DatabaseSeeder extends Seeder
     {
         // Akun admin untuk fitur Add Area di dashboard (password cast 'hashed' di model User)
         User::updateOrCreate(
-            ['email' => 'admin@ssprimadaya.co.id'],
+            ['email' => 'ssprimadaya.co.id'],
             ['name' => 'Admin', 'password' => 'admin123'],
         );
 
