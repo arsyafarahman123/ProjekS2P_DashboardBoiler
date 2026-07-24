@@ -11,11 +11,7 @@
     body {
         font-family: 'Inter', sans-serif; margin:0; min-height:100vh;
         display:flex; align-items:center; justify-content:center;
-        background:
-            radial-gradient(ellipse 1000px 560px at 12% -8%, #f5b30122, transparent 60%),
-            radial-gradient(ellipse 900px 560px at 100% 0%, #1a4a7a3d, transparent 60%),
-            radial-gradient(ellipse 700px 500px at 50% 110%, #0d3a5c40, transparent 60%),
-            #050b1a;
+        background: linear-gradient(120deg, #64798f 0%, #586C82 45%, #46586c 100%);
         background-attachment: fixed;
         position: relative;
         overflow: hidden;
@@ -29,12 +25,12 @@
     }
     @keyframes strip-flow { 0% {background-position: 0% 0;} 100% {background-position: 300% 0;} }
 
-    .login-wrap { position: relative; z-index: 2; width: 100%; max-width: 400px; margin: 20px; }
+    .login-wrap { position: relative; z-index: 2; width: 100%; max-width: 400px; margin: 20px auto; }
 
     .login-card {
         position: relative;
-        background: linear-gradient(120deg, #64798f 0%, #586C82 45%, #46586c 100%);
-        border: 1px solid #6f849a; border-radius: 18px;
+        background: linear-gradient(160deg, #132f57 0%, #0d2140 65%);
+        border: 1px solid #1e3a5f; border-radius: 18px;
         padding: 36px 34px 30px 34px;
         box-shadow: 0 20px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,0.05);
         overflow: hidden;
@@ -47,7 +43,7 @@
 
     .login-content { position: relative; z-index: 1; }
 
-    .logo-row { display:flex; align-items:center; gap:12px; margin-bottom:26px; }
+    .logo-row { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:26px; text-align:center; }
     .logo-box {
         width:52px; height:40px; background:#0e2037; border-top:2px solid #f5b301; border-bottom:2px solid #f5b301;
         border-radius:2px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;
@@ -57,17 +53,7 @@
     .brand-name { font-family:'Poppins',sans-serif; font-weight:800; font-size:15px; color:#f5b301; letter-spacing:.5px; line-height:1.3; }
     .brand-sub { color:#9fc0dc; font-size:10.5px; font-weight:600; letter-spacing:.8px; }
 
-    .status-badge {
-        display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:999px;
-        background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.3);
-        color:#4ade80; font-size:10px; font-weight:700; letter-spacing:.6px; margin-bottom:18px;
-    }
-    .pulse-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#22c55e; animation: pulse-glow 1.8s infinite; }
-    @keyframes pulse-glow {
-        0% { box-shadow: 0 0 0 0 rgba(34,197,94,.6); } 70% { box-shadow: 0 0 0 7px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
-    }
-
-    .title-row { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+    .title-row { display:flex; align-items:center; gap:10px; margin-bottom:6px; margin-top:4px; }
     .title-row .accent-bar { width:4px; height:20px; background:#f5b301; border-radius:2px; flex-shrink:0; }
     .login-card h1 { color:#fff; font-size:19px; font-weight:800; margin:0; letter-spacing:.4px; font-family:'Poppins',sans-serif; }
     .login-card p.sub { color:#d7e4f0; font-size:12.5px; line-height:1.5; margin:0 0 26px 0; }
@@ -115,7 +101,7 @@
     }
     a.back-link:hover { color:#f5b301; }
 
-    .footer-note { text-align:center; margin-top:22px; color:#5b86ac; font-size:10.5px; letter-spacing:.3px; }
+    .footer-note { text-align:center; margin-top:22px; color:#0c1a2b; font-size:11px; font-weight:600; letter-spacing:.3px; }
 </style>
 </head>
 <body>
@@ -135,11 +121,6 @@
                     <div class="brand-name">S2P PLTU CILACAP</div>
                     <div class="brand-sub">BOILER DIGITAL TWIN</div>
                 </div>
-            </div>
-
-            <div class="status-badge">
-                <span class="pulse-dot"></span>
-                SYSTEM ONLINE
             </div>
 
             <div class="title-row">
