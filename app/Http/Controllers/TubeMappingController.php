@@ -45,6 +45,21 @@ class TubeMappingController extends Controller
             ->where('year', $year)
             ->get();
 
+        // Peta nomor tube -> status (buat warnain kotak grid). tube_id
+        // formatnya "KODE-U3A-01", jadi angka di belakang diambil sebagai
+        // nomor tube.
+        $statusByTubeNumber = $tubes->mapWithKeys(function ($t) {
+            preg_match('/(\d+)$/', $t->tube_id, $m);
+
+            return $m ? [(int) $m[1] => $t->status] : [];
+        });
+
+        $creepByTubeNumber = $tubes->mapWithKeys(function ($t) {
+            preg_match('/(\d+)$/', $t->tube_id, $m);
+
+            return $m ? [(int) $m[1] => $t->creep_pct] : [];
+        });
+
         // Grid Primary Superheater Unit 3A: jumlah slot & susunan titik ukur
         // mengikuti pengaturan area (menu admin Input Data).
         $pshArea = BoilerArea::where('unit', BoilerTube::DEFAULT_UNIT)
@@ -58,6 +73,14 @@ class TubeMappingController extends Controller
             ->get()
             ->groupBy('tube_number')
             ->map(fn ($rows) => $rows->keyBy('point'));
+
+        // Statistik MIN/MAX/AVG ketebalan dinding tube selama 5 tahun
+        // (2021-2025), dihitung langsung dari data dummy excel/CSV yang
+        // sama dipakai seeder — supaya angka di popup tube-mapping selalu
+        // sinkron dengan data dummy Unit 3A 2021-2025 aslinya.
+        $tubeThicknessStats = $this->thicknessStatsForSection($unit, $section);
+
+        $sectionCode = BoilerTube::SECTION_CODES[$section] ?? strtoupper(substr($section, 0, 3));
 
         $total = $tubes->count();
         $summary = [
@@ -102,8 +125,60 @@ class TubeMappingController extends Controller
         return view('tube-mapping.index', compact(
             'pshPoints', 'pshTotal', 'pshPointNames', 'summary', 'topPriority',
             'historicalNdt', 'creepTrend', 'units', 'sections', 'years',
-            'unit', 'section', 'year'
+            'unit', 'section', 'year', 'statusByTubeNumber', 'tubeThicknessStats', 'creepByTubeNumber', 'sectionCode'
         ));
+    }
+
+    /**
+     * Baca database/seeders/data/tube_dummy_2021_2025.csv (data dummy asli
+     * Unit 3A 2021-2025) dan hitung MIN / MAX / AVG "Wall Thickness Terukur"
+     * per nomor tube untuk satu unit+section, dari seluruh tahun yang ada.
+     *
+     * @return array<int, array{min: float, max: float, avg: float, years: int}>
+     */
+    private function thicknessStatsForSection(string $unit, string $section): array
+    {
+        $csvPath = database_path('seeders/data/tube_dummy_2021_2025.csv');
+        if (! file_exists($csvPath)) {
+            return [];
+        }
+
+        $unitCsvLabel = strtoupper($unit); // csv nyimpen "UNIT 3A"
+        $rowsByTube = [];
+        $minAllowableByTube = [];
+
+        $handle = fopen($csvPath, 'r');
+        $header = fgetcsv($handle);
+        while (($row = fgetcsv($handle)) !== false) {
+            $data = array_combine($header, $row);
+            if (strtoupper($data['unit']) !== $unitCsvLabel || $data['section'] !== $section) {
+                continue;
+            }
+            $tubeNumber = (int) $data['tube_number'];
+            $rowsByTube[$tubeNumber][(int) $data['year']] = (float) $data['measured_thickness'];
+            $minAllowableByTube[$tubeNumber] = (float) $data['min_allowable'];
+        }
+        fclose($handle);
+
+        $stats = [];
+        foreach ($rowsByTube as $tubeNumber => $byYear) {
+            ksort($byYear);
+            $values = array_values($byYear);
+            $stats[$tubeNumber] = [
+                'min' => round(min($values), 2),
+                'max' => round(max($values), 2),
+                'avg' => round(array_sum($values) / count($values), 2),
+                'years' => count($values),
+                // Angka asli per tahun (bukan titik A/B/C/D karangan) —
+                // dipakai buat tampilin "titik pengukuran" yang jujur di popup.
+                'by_year' => $byYear,
+                // Batas ketebalan minimum yang masih boleh (dari kolom
+                // "Minimum Allowable Thickness" di excel) — acuan aman/kritis.
+                'min_allowable' => round($minAllowableByTube[$tubeNumber], 2),
+            ];
+        }
+
+        return $stats;
     }
 
     public function show(string $tubeId)

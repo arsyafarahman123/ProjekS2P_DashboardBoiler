@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             TubeScanSeeder::class,
             BoilerTubeSeeder::class,
             BoilerAreaSeeder::class,
+            TubeMeasurementSeeder::class, // baca CSV dummy excel, isi baseline + titik ukur + status
         ]);
     }
 }

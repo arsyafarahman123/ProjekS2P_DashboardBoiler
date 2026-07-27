@@ -1,11 +1,12 @@
-@extends('layouts.dashboard')
-
-@section('title', 'Tube Mapping - S2P Boiler Dashboard')
-
-@push('head')
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Tube Mapping - S2P Boiler Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
@@ -23,11 +24,24 @@
     }
   }
 </script>
-@endpush
-
-@push('styles')
 <style>
-  body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    margin: 0;
+    background:
+        radial-gradient(ellipse 1000px 560px at 12% -8%, #e0a94022, transparent 60%),
+        radial-gradient(ellipse 900px 560px at 100% 0%, #1a4a7a3d, transparent 60%),
+        radial-gradient(ellipse 700px 500px at 50% 110%, #0d3a5c40, transparent 60%),
+        linear-gradient(120deg, #64798f 0%, #586C82 45%, #46586c 100%);
+    background-attachment: fixed;
+  }
+  .panel-title { color:white; font-weight:700; font-size:12px; letter-spacing:1.5px; }
+  #boiler-pdf-tm {
+    width:100%; max-width:100%;
+    aspect-ratio: 2384 / 3370;
+    border:0; border-radius:4px; display:block; background:#0d2140;
+  }
   .cell { transition: transform .12s ease; }
   .cell:hover { transform: scale(1.15); z-index: 10; position: relative; }
   .tube-grid{
@@ -53,6 +67,65 @@
   .rounded-lg{ border-radius:5px !important; }
   .accent-bar { width:4px; height:20px; background:#e0a940; border-radius:2px; flex-shrink:0; display:inline-block; }
 
+  .sidebar{
+    width:72px;
+    min-width:72px;
+    background:linear-gradient(180deg, #0a1729 0%, #0d2038 100%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding-top:14px;
+    padding-bottom:14px;
+    gap:20px;
+    position:sticky;
+    top:0;
+    align-self:flex-start;
+    height:100vh;
+    overflow-y:auto;
+    overflow-x:hidden;
+    scrollbar-width:thin;
+    scrollbar-color:#2a4a6e transparent;
+  }
+  .sidebar::-webkit-scrollbar{ width:4px; }
+  .sidebar::-webkit-scrollbar-thumb{ background:#2a4a6e; border-radius:4px; }
+  .sidebar .logo-box{
+    width:52px;
+    height:52px;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  .sidebar-nav{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    margin-top:8px;
+    align-items:center;
+    padding-bottom:12px;
+  }
+  .sidebar-nav .nav-item{
+    writing-mode:vertical-rl;
+    transform:rotate(180deg);
+    font-size:10px;
+    letter-spacing:1.5px;
+    font-weight:600;
+    color:#6d7f96;
+    position:relative;
+    padding:4px 8px 4px 0;
+    background:none;
+    border:none;
+    border-right:3px solid transparent;
+    cursor:pointer;
+  }
+  .sidebar-nav .nav-item:hover{
+    color:#cbd5e1;
+  }
+  .sidebar-nav .nav-item.active{
+    color:#fff;
+    border-right-color:#e0a940;
+  }
 
   .header-logo-box{
     width:70px;
@@ -63,13 +136,27 @@
     justify-content:center;
     flex-shrink:0;
   }
+  body > div.flex{ min-height:100vh; }
 </style>
-@endpush
+</head>
+<body class="text-slate-200 min-h-screen" x-data="tubeDashboard()">
 
-@section('body-class', 'bg-bgnavy text-slate-200 min-h-screen')
+<div class="flex">
 
-@section('content')
-  <main class="main" x-data="tubeDashboard()">
+  <aside class="sidebar">
+    <div class="logo-box">
+      <img src="{{ asset('images/logo.png') }}" alt="S2P logo" class="w-full h-full object-contain">
+    </div>
+    <nav class="sidebar-nav">
+      <a href="{{ route('global-view') }}" class="nav-item">GLOBAL VIEW</a>
+      <a href="{{ route('tube.mapping') }}" class="nav-item active">TUBE MAPPING</a>
+      <a href="{{ route('rla-analysis') }}" class="nav-item">RLA ANALYSIS</a>
+      <a href="{{ route('maintenance') }}" class="nav-item">MAINTENANCE</a>
+      <a href="{{ route('input-data.index') }}" class="nav-item">INPUT DATA</a>
+    </nav>
+  </aside>
+
+  <main class="flex-1 p-6">
 
     <div class="flex items-center justify-between mb-5">
       <div class="flex items-center gap-[10px]">
@@ -125,10 +212,18 @@
 
         <div class="tube-grid select-none">
           @for($i=1;$i<=$pshTotal;$i++)
-            @php $pts = $pshPoints->get($i); @endphp
+            @php
+              $status = $statusByTubeNumber[$i] ?? null;
+              $cellClass = match ($status) {
+                  'Safe' => 'bg-safe/25 text-safe border-safe/50 hover:bg-safe/40',
+                  'Watch' => 'bg-watch/25 text-watch border-watch/50 hover:bg-watch/40',
+                  'Critical' => 'bg-critical/25 text-critical border-critical/50 hover:bg-critical/40',
+                  default => 'bg-white/[0.07] text-slate-500 border-white/10',
+              };
+            @endphp
             <button type="button"
-              @click="selectPshTube({{ $i }}, @js($pts?->map(fn ($m) => $m->thickness_mm)->all()), $event)"
-              class="cell tube-cell bg-white/[0.07] text-slate-500 border border-white/10">
+              @click="selectPshTube({{ $i }}, $event)"
+              class="cell tube-cell border {{ $cellClass }}">
               {{ $i }}
             </button>
           @endfor
@@ -144,14 +239,48 @@
             </div>
             <button @click="selected=null" class="text-slate-400 hover:text-white">X</button>
           </div>
+
+          <div class="flex items-center justify-between mb-3 text-slate-300">
+            <span>STATUS:
+              <span class="font-bold" :class="statusClass()" x-text="statusText()"></span>
+            </span>
+            <span>CREEP: <span class="font-semibold text-white" x-text="creepText()"></span></span>
+          </div>
+
+          <div class="text-[10px] font-bold tracking-wide text-slate-400 mb-1">
+            WALL THICKNESS 5 TAHUN ({{ min(\App\Models\BoilerTube::YEARS) }}&ndash;{{ max(\App\Models\BoilerTube::YEARS) }})
+          </div>
+          <div x-show="!hasThicknessStats()" class="text-slate-500 pb-2">
+            Belum ada data dummy untuk tube ini.
+          </div>
+          <div x-show="hasThicknessStats()" class="grid grid-cols-3 gap-2 pb-2">
+            <div>
+              <div class="text-[10px] text-slate-500">MIN</div>
+              <div class="font-semibold" :class="minClass()" x-text="thicknessStat('min')"></div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-500">MAX</div>
+              <div class="font-semibold text-safe" x-text="thicknessStat('max')"></div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-500">AVG</div>
+              <div class="font-semibold text-white" x-text="thicknessStat('avg')"></div>
+            </div>
+          </div>
+          <div x-show="hasThicknessStats()" class="text-[10.5px] text-slate-400 pb-3 mb-3 border-b border-white/10">
+            Batas minimum aman (min. allowable): <span class="font-semibold text-white" x-text="minAllowableText()"></span>.
+            MIN <span :class="minClass()" class="font-semibold">merah/kuning</span> artinya titik paling tipis udah dekat/lewat batas ini.
+          </div>
+
+          <div class="text-[10px] font-bold tracking-wide text-slate-400 mb-1">TITIK PENGUKURAN (DATA ASLI PER TAHUN)</div>
           <div class="space-y-1 text-slate-300">
-            <template x-for="p in pointNames()" :key="p">
-              <div>TITIK <span x-text="p"></span>:
-                <span class="font-semibold text-white" x-text="pointValue(p)"></span>
+            <template x-for="yr in yearList()" :key="yr">
+              <div>TAHUN <span x-text="yr"></span>:
+                <span class="font-semibold text-white" x-text="yearValue(yr)"></span>
               </div>
             </template>
-            <div x-show="!hasValues()" class="text-slate-500 pt-1">
-              Belum ada data pengukuran — akan terisi lewat menu Input Data.
+            <div x-show="!hasThicknessStats()" class="text-slate-500 pt-1">
+              Belum ada data dummy untuk tube ini.
             </div>
           </div>
         </div>
@@ -161,9 +290,17 @@
         <div class="bg-panel rounded-lg p-4">
           <div class="flex items-center justify-between mb-3">
             <div class="text-xs font-bold tracking-wide">BOILER 3D STRUCTURE</div>
-            <div class="text-[9px] text-slate-500">drag = putar &middot; scroll = zoom</div>
+            <div class="text-[9px] text-slate-500">{{ strtoupper($unit) }}</div>
           </div>
-          <div id="boiler3d" class="h-80 rounded bg-[#0d1830] overflow-hidden"></div>
+          @if($unit === \App\Models\BoilerTube::DEFAULT_UNIT)
+            <iframe id="boiler-pdf-tm"
+              src="{{ asset('images/'.rawurlencode('F2092S-J0203-05 R1 SECTION VIEW DRAWING OF BOILER HOUSE.pdf')) }}#toolbar=0&navpanes=0&view=Fit"
+              title="Section View Drawing of Boiler House"></iframe>
+          @else
+            <div class="rounded bg-[#0d1830] flex items-center justify-center text-[11px] text-slate-500" style="min-height:320px;">
+              Gambar section drawing belum tersedia untuk {{ strtoupper($unit) }}.
+            </div>
+          @endif
         </div>
         <div class="bg-panel rounded-lg p-4 flex-1">
           <div class="flex justify-between items-center mb-2">
@@ -245,13 +382,19 @@
     <div x-show="toast" x-cloak x-text="toast"
          class="fixed bottom-6 right-6 bg-panel border border-white/10 text-slate-200 text-xs px-4 py-2 rounded shadow-lg z-50"></div>
   </main>
+</div>
 
-@endsection
-
-@push('scripts')
 <script>
-// Susunan titik ukur area Primary Superheater (diatur admin lewat menu Input Data)
-const PSH_POINTS = @json($pshPointNames);
+// MIN/MAX/AVG wall thickness 5 tahun (2021-2025) per nomor tube, + angka
+// asli tiap tahun (by_year) — dihitung server-side langsung dari
+// tube_dummy_2021_2025.csv (data dummy Unit 3A), bukan data karangan.
+const TUBE_THICKNESS_STATS = @json($tubeThicknessStats);
+// Status & creep terkini (tahun yang lagi difilter) per nomor tube.
+const STATUS_BY_TUBE = @json($statusByTubeNumber);
+const CREEP_BY_TUBE = @json($creepByTubeNumber);
+// Kode section aktif (mis. FBS, PSH, SSH) buat bikin Tube ID yang benar
+// sesuai section yang lagi dibuka, bukan selalu "PSH".
+const SECTION_CODE = @json($sectionCode);
 
 function tubeDashboard() {
   return {
@@ -259,19 +402,55 @@ function tubeDashboard() {
     popupStyle: '',
     toast: null,
     filterTubeId: '',
-    pointNames() {
-      return PSH_POINTS;
+    hasThicknessStats() {
+      return !!TUBE_THICKNESS_STATS[this.selected?.no];
     },
-    pointValue(p) {
-      const v = this.selected?.points?.[p];
-      return v == null ? '-' : v + ' mm';
+    thicknessStat(kind) {
+      const stats = TUBE_THICKNESS_STATS[this.selected?.no];
+      if (!stats) return '-';
+      return Number(stats[kind]).toFixed(2) + ' mm';
     },
-    hasValues() {
-      const pts = this.selected?.points || {};
-      return Object.values(pts).some(v => v != null);
+    minAllowableText() {
+      const stats = TUBE_THICKNESS_STATS[this.selected?.no];
+      return stats ? Number(stats.min_allowable).toFixed(2) + ' mm' : '-';
     },
-    selectPshTube(no, points, event) {
-      this.selected = { no, id: 'PSH-U3A-' + String(no).padStart(2, '0'), points };
+    minClass() {
+      const stats = TUBE_THICKNESS_STATS[this.selected?.no];
+      if (!stats) return 'text-slate-400';
+      // Seberapa dekat MIN ke batas minimum allowable, dibanding jarak MAX ke batas itu
+      // (dipakai sebagai "margin aman" tube ini) — makin dekat/lewat batas, makin merah.
+      const margin = stats.max - stats.min_allowable;
+      const used = stats.max - stats.min; // seberapa banyak sudah terpakai dari margin
+      const pctUsed = margin > 0 ? (used / margin) * 100 : 100;
+      if (stats.min <= stats.min_allowable || pctUsed >= 80) return 'text-critical';
+      if (pctUsed >= 40) return 'text-watch';
+      return 'text-safe';
+    },
+    yearList() {
+      const stats = TUBE_THICKNESS_STATS[this.selected?.no];
+      return stats ? Object.keys(stats.by_year).sort() : [];
+    },
+    yearValue(yr) {
+      const stats = TUBE_THICKNESS_STATS[this.selected?.no];
+      const v = stats?.by_year?.[yr];
+      return v == null ? '-' : Number(v).toFixed(2) + ' mm';
+    },
+    statusText() {
+      return STATUS_BY_TUBE[this.selected?.no] ? String(STATUS_BY_TUBE[this.selected?.no]).toUpperCase() : 'BELUM ADA DATA';
+    },
+    statusClass() {
+      const s = STATUS_BY_TUBE[this.selected?.no];
+      if (s === 'Safe') return 'text-safe';
+      if (s === 'Watch') return 'text-watch';
+      if (s === 'Critical') return 'text-critical';
+      return 'text-slate-500';
+    },
+    creepText() {
+      const c = CREEP_BY_TUBE[this.selected?.no];
+      return c == null ? '-' : Number(c).toFixed(2) + '%';
+    },
+    selectPshTube(no, event) {
+      this.selected = { no, id: SECTION_CODE + '-U3A-' + String(no).padStart(2, '0') };
 
       const btn = event.currentTarget;
       const container = btn.closest('.relative');
@@ -326,168 +505,6 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 </script>
-<script>
-const SECTION_LAYOUT = {
-  "Waterwall":      {x0:0.5, x1:3.0, y0:0, y1:3.5, z0:0,   z1:2.0},
-  "Superheater":    {x0:3.6, x1:4.6, y0:0, y1:3.0, z0:0.3, z1:1.7},
-  "Reheater":       {x0:5.2, x1:6.0, y0:0, y1:2.8, z0:0.3, z1:1.7},
-  "Economizer":     {x0:6.6, x1:7.4, y0:0, y1:2.5, z0:0.3, z1:1.7},
-  "Air Preheater":  {x0:8.0, x1:9.5, y0:0, y1:2.2, z0:0.3, z1:1.7},
-};
-const SECTION_COLOR = {
-  "Waterwall": "#3fdc84", "Superheater": "#e0c23c", "Reheater": "#3fdc84",
-  "Economizer": "#3fdc84", "Air Preheater": "#7fd4e8",
-};
-const STEEL = "#5b7a99";
 
-function vsub(a,b){ return [a[0]-b[0], a[1]-b[1], a[2]-b[2]]; }
-function vadd(a,b){ return [a[0]+b[0], a[1]+b[1], a[2]+b[2]]; }
-function vscale(a,s){ return [a[0]*s, a[1]*s, a[2]*s]; }
-function vnorm(a){ return Math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]); }
-function vcross(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
-function vunit(a){ const n = vnorm(a) || 1e-9; return [a[0]/n, a[1]/n, a[2]/n]; }
-function linspace(a,b,n,endpoint=true){
-  if(n===1) return [a];
-  const step = endpoint ? (b-a)/(n-1) : (b-a)/n;
-  const out = [];
-  for(let i=0;i<n;i++) out.push(a+step*i);
-  return out;
-}
-
-function makeCylinder(p0,p1,r0,r1,color,name,nTheta=10,opacity=0.95,caps=true){
-  const axis = vsub(p1,p0);
-  let length = vnorm(axis);
-  let u;
-  if(length < 1e-9){ u=[0,0,1]; length=1e-6; } else { u = vscale(axis, 1/length); }
-  const tmp = Math.abs(u[0]) < 0.9 ? [1,0,0] : [0,1,0];
-  let v1 = vunit(vcross(u, tmp));
-  let v2 = vcross(u, v1);
-  const thetas = linspace(0, 2*Math.PI, nTheta, false);
-  const dirs = thetas.map(t => [
-    Math.cos(t)*v1[0] + Math.sin(t)*v2[0],
-    Math.cos(t)*v1[1] + Math.sin(t)*v2[1],
-    Math.cos(t)*v1[2] + Math.sin(t)*v2[2],
-  ]);
-  const bottom = dirs.map(d => vadd(p0, vscale(d, r0)));
-  const top = dirs.map(d => vadd(p1, vscale(d, r1)));
-  let verts = bottom.concat(top);
-  const n = nTheta;
-  let ii=[], jj=[], kk=[];
-  for(let idx=0; idx<n; idx++){
-    const a=idx, b=(idx+1)%n, c=idx+n, d=((idx+1)%n)+n;
-    ii.push(a,a); jj.push(b,d); kk.push(d,c);
-  }
-  if(caps){
-    const cb = verts.length, ct = verts.length+1;
-    verts.push(p0, p1);
-    for(let idx=0; idx<n; idx++){
-      const a=idx, b=(idx+1)%n;
-      ii.push(cb); jj.push(b); kk.push(a);
-      const a2=idx+n, b2=((idx+1)%n)+n;
-      ii.push(ct); jj.push(a2); kk.push(b2);
-    }
-  }
-  return {
-    type:"mesh3d",
-    x: verts.map(v=>v[0]), y: verts.map(v=>v[1]), z: verts.map(v=>v[2]),
-    i: ii, j: jj, k: kk,
-    color, opacity, name, flatshading:true, hoverinfo:"name",
-    lighting:{ambient:0.55, diffuse:0.7, specular:0.4, roughness:0.45, fresnel:0.1},
-  };
-}
-
-function makeTubeGrid(l, color, name, nCols=3, nRows=4, radius=0.11){
-  const traces = [];
-  const xs = nCols>1 ? linspace(l.x0+(l.x1-l.x0)*0.15, l.x1-(l.x1-l.x0)*0.15, nCols) : [(l.x0+l.x1)/2];
-  const zs = linspace(l.z0+(l.z1-l.z0)*0.08, l.z1-(l.z1-l.z0)*0.08, nRows);
-  zs.forEach(zc => xs.forEach(xc => {
-    traces.push(makeCylinder([xc,l.y0,zc],[xc,l.y1,zc], radius, radius, color, name, 8, 0.95, true));
-  }));
-  return traces;
-}
-
-function makeWaterwall(l, color, name, nPerSide=6, radius=0.055){
-  const traces = [];
-  let pts = [];
-  linspace(l.x0, l.x1, nPerSide, false).forEach(t => pts.push([t, l.y0]));
-  linspace(l.y0, l.y1, nPerSide, false).forEach(t => pts.push([l.x1, t]));
-  linspace(l.x1, l.x0, nPerSide, false).forEach(t => pts.push([t, l.y1]));
-  linspace(l.y1, l.y0, nPerSide, false).forEach(t => pts.push([l.x0, t]));
-  pts.forEach(([px,py]) => {
-    traces.push(makeCylinder([px,py,l.z0],[px,py,l.z1], radius, radius, color, name, 6, 0.95, false));
-  });
-  return traces;
-}
-
-function makeAirPreheater(l, color, name){
-  const cx = (l.x0+l.x1)/2, cz = (l.z0+l.z1)/2;
-  const r = Math.min(l.x1-l.x0, l.z1-l.z0)/2*0.92;
-  const traces = [makeCylinder([cx,l.y0,cz],[cx,l.y1,cz], r, r, color, name, 18, 0.95, true)];
-  let sx=[], sy=[], sz=[];
-  [l.y0, l.y1].forEach(yc => {
-    linspace(0, 2*Math.PI, 8, false).forEach(ang => {
-      sx.push(cx, cx+r*Math.cos(ang), null);
-      sy.push(yc, yc, null);
-      sz.push(cz, cz+r*Math.sin(ang), null);
-    });
-  });
-  traces.push({type:"scatter3d", mode:"lines", x:sx, y:sy, z:sz, line:{color:"#0a1826", width:3}, hoverinfo:"skip", showlegend:false});
-  return traces;
-}
-
-function makeDuct(p0, p1, radius=0.22){
-  return makeCylinder(p0, p1, radius, radius, STEEL, "Ducting", 10, 0.9, true);
-}
-
-function buildBoiler3D(){
-  const L = SECTION_LAYOUT["Waterwall"], S = SECTION_LAYOUT["Superheater"], R = SECTION_LAYOUT["Reheater"],
-        E = SECTION_LAYOUT["Economizer"], A = SECTION_LAYOUT["Air Preheater"];
-  let traces = [];
-  traces.push(makeCylinder([5.3,1.5,-0.35],[5.3,1.5,-0.3], 6.4, 6.4, "#1c3d5f", "Ground", 24, 0.85, true));
-
-  traces = traces.concat(makeWaterwall(L, SECTION_COLOR["Waterwall"], "Waterwall", 5, 0.32));
-  traces.push(makeCylinder([L.x0-0.25,1.5,L.z1+0.6],[L.x1+0.25,1.5,L.z1+0.6], 0.55, 0.55, STEEL, "Steam Drum", 14, 0.95, true));
-
-  [["Superheater",S,3,3,0.4], ["Reheater",R,2,3,0.4], ["Economizer",E,2,3,0.34]].forEach(([name,layout,nc,nr,rad]) => {
-    traces = traces.concat(makeTubeGrid(layout, SECTION_COLOR[name], name, nc, nr, rad));
-  });
-
-  traces = traces.concat(makeAirPreheater(A, SECTION_COLOR["Air Preheater"], "Air Preheater"));
-
-  traces.push(makeCylinder([10.6,1.5,0],[10.6,1.5,9.5], 0.55, 0.42, "#8a97a3", "Cerobong", 16, 0.95, true));
-  traces.push(makeCylinder([10.6,1.5,9.5],[10.6,1.5,9.9], 0.42, 0.5, "#6b7885", "Cerobong Cap", 16, 0.95, true));
-
-  const midZ = 5.5;
-  traces.push(makeDuct([L.x1,1.5,midZ],[S.x0,1.5,midZ], 0.5));
-  traces.push(makeDuct([S.x1,1.5,midZ],[R.x0,1.5,midZ], 0.45));
-  traces.push(makeDuct([R.x1,1.5,midZ],[E.x0,1.5,midZ], 0.42));
-  traces.push(makeDuct([E.x1,1.5,4.3],[A.x0,1.5,3.5], 0.4));
-  traces.push(makeDuct([A.x1,1.5,3.5],[10.6,1.5,4], 0.42));
-
-  Object.entries(SECTION_LAYOUT).forEach(([section, layout]) => {
-    const cx = (layout.x0+layout.x1)/2;
-    traces.push({type:"scatter3d", mode:"text", x:[cx], y:[layout.y1+0.4], z:[layout.z1+0.6],
-      text:[section.toUpperCase()], textfont:{color:"white", size:10}, showlegend:false, hoverinfo:"skip"});
-  });
-
-  const layout = {
-    scene:{
-      xaxis:{title:"", showbackground:false, showticklabels:false, showgrid:false, zeroline:false},
-      yaxis:{title:"", showbackground:false, visible:false},
-      zaxis:{title:"", showbackground:false, showticklabels:false, showgrid:false, zeroline:false},
-      aspectmode:"manual", aspectratio:{x:1.9,y:1.0,z:1.3},
-      camera:{eye:{x:0.75,y:0.75,z:0.45}}, bgcolor:"#0d1830",
-    },
-    margin:{l:0,r:0,t:0,b:0}, paper_bgcolor:"#0d1830", font:{color:"white"}, showlegend:false,
-  };
-  return {traces, layout};
-}
-
-document.addEventListener("DOMContentLoaded", function () {
-  const container = document.getElementById("boiler3d");
-  if (!container || typeof Plotly === "undefined") return;
-  const boiler = buildBoiler3D();
-  Plotly.newPlot("boiler3d", boiler.traces, boiler.layout, {displaylogo:false, responsive:true});
-});
-</script>
-@endpush
+</body>
+</html>

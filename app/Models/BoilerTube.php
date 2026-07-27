@@ -27,16 +27,20 @@ class BoilerTube extends Model
 
     const YEARS = [2021, 2022, 2023, 2024, 2025];
 
+    // Disamakan dengan data dummy Excel (tube_dummy_2021_2025.csv): tiap
+    // section punya 200 titik tube. Sebelumnya angka ini lebih kecil
+    // (16/40/20/24 dst) sehingga cuma tube nomor awal yang punya data —
+    // sisanya tampil abu-abu "BELUM ADA DATA" di grid Tube Mapping.
     const SECTION_COUNTS = [
-        'Furnace Bottom Slope'         => 16,
-        'Furnace Waterwall Tube'      => 40,
-        'Platen Superheater'          => 20,
-        'Final Superheater'           => 20,
-        'Low Temperature Superheater' => 20,
-        'Primary Superheater'         => 24,
-        'Secondary Superheater'       => 24,
-        'Economizer'                  => 16,
-        'Sootblower Area'             => 12,
+        'Furnace Bottom Slope'         => 200,
+        'Furnace Waterwall Tube'      => 200,
+        'Platen Superheater'          => 200,
+        'Final Superheater'           => 200,
+        'Low Temperature Superheater' => 200,
+        'Primary Superheater'         => 200,
+        'Secondary Superheater'       => 200,
+        'Economizer'                  => 200,
+        'Sootblower Area'             => 200,
     ];
 
     // Kode singkat per section, dipakai untuk tube_id (mis. FBS-U1-01) dan label chart
