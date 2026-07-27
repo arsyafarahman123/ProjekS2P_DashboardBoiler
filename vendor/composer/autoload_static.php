@@ -687,6 +687,7 @@ class ComposerStaticInit36793882908b6cbdd344b5a4840231db
         'Database\\Seeders\\BoilerAreaSeeder' => __DIR__ . '/../..' . '/database/seeders/BoilerAreaSeeder.php',
         'Database\\Seeders\\BoilerTubeSeeder' => __DIR__ . '/../..' . '/database/seeders/BoilerTubeSeeder.php',
         'Database\\Seeders\\DatabaseSeeder' => __DIR__ . '/../..' . '/database/seeders/DatabaseSeeder.php',
+        'Database\\Seeders\\TubeMeasurementSeeder' => __DIR__ . '/../..' . '/database/seeders/TubeMeasurementSeeder.php',
         'Database\\Seeders\\TubeScanSeeder' => __DIR__ . '/../..' . '/database/seeders/TubeScanSeeder.php',
         'DateError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateError.php',
         'DateException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateException.php',

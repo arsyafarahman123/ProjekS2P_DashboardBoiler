@@ -94,4 +94,9 @@ Route::middleware('auth')->prefix('input_data')->name('input-data.')->group(func
     Route::delete('/ukur/{tubeNumber}', [InputDataController::class, 'ukurDestroy'])
         ->name('ukur.destroy')
         ->whereNumber('tubeNumber');
+
+    Route::get('/rla', [InputDataController::class, 'rla'])->name('rla');
+    Route::post('/rla', [InputDataController::class, 'rlaStore'])->name('rla.store');
+    Route::get('/rla/download/{document}', [InputDataController::class, 'rlaDownload'])->name('rla.download');
+    Route::delete('/rla/{document}', [InputDataController::class, 'rlaDestroy'])->name('rla.destroy');
 });

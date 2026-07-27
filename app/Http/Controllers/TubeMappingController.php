@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BoilerArea;
 use App\Models\BoilerTube;
+use App\Models\TubeBaseline;
 use App\Models\TubeMeasurement;
 use Illuminate\Http\Request;
 
@@ -80,6 +81,13 @@ class TubeMappingController extends Controller
         // sinkron dengan data dummy Unit 3A 2021-2025 aslinya.
         $tubeThicknessStats = $this->thicknessStatsForSection($unit, $section);
 
+        // Tabel titik ukur A-D per tube (persen ketebalan sisa terhadap
+        // baseline). 100-75% = SAFE, 75-70% = WARNING, <70% = CRITICAL.
+        // Satu titik di bawah 70% sudah cukup bikin tube itu CRITICAL,
+        // walau titik lain masih tinggi (MIN yang menentukan risiko).
+        $pointsTable = $this->pointsTableForSection($unit, $section);
+        $pointNames = TubeMeasurement::POINTS;
+
         $sectionCode = BoilerTube::SECTION_CODES[$section] ?? strtoupper(substr($section, 0, 3));
 
         $total = $tubes->count();
@@ -125,8 +133,55 @@ class TubeMappingController extends Controller
         return view('tube-mapping.index', compact(
             'pshPoints', 'pshTotal', 'pshPointNames', 'summary', 'topPriority',
             'historicalNdt', 'creepTrend', 'units', 'sections', 'years',
-            'unit', 'section', 'year', 'statusByTubeNumber', 'tubeThicknessStats', 'creepByTubeNumber', 'sectionCode'
+            'unit', 'section', 'year', 'statusByTubeNumber', 'tubeThicknessStats', 'creepByTubeNumber', 'sectionCode',
+            'pointsTable', 'pointNames'
         ));
+    }
+
+    /**
+     * Bangun tabel titik ukur A-D (persen ketebalan sisa vs baseline) per
+     * nomor tube untuk section+unit aktif, dari tube_measurements +
+     * tube_baselines. Dipakai buat tabel "Jenis Pipa per Titik A-D" di
+     * bawah grafik creep, dan buat cari status per-titik (warna merah
+     * kalau ada 1 titik < 70%).
+     *
+     * @return array<int, array{pct: array<string,float|null>, status: string}>
+     */
+    private function pointsTableForSection(string $unit, string $section): array
+    {
+        $pointNames = TubeMeasurement::POINTS;
+
+        $baselines = TubeBaseline::where('unit', $unit)
+            ->where('section', $section)
+            ->pluck('initial_thickness_mm', 'tube_number');
+
+        $measurements = TubeMeasurement::where('unit', $unit)
+            ->where('section', $section)
+            ->get()
+            ->groupBy('tube_number');
+
+        $table = [];
+        foreach ($measurements as $tubeNumber => $rows) {
+            $baseline = $baselines[$tubeNumber] ?? null;
+            $pctByPoint = [];
+            foreach ($pointNames as $p) {
+                $row = $rows->firstWhere('point', $p);
+                $pctByPoint[$p] = ($row && $baseline) ? round($row->thickness_mm / $baseline * 100, 1) : null;
+            }
+
+            $validPct = array_filter($pctByPoint, fn ($v) => $v !== null);
+            $minPct = $validPct ? min($validPct) : null;
+            $status = match (true) {
+                $minPct === null => 'unknown',
+                $minPct < 70 => 'critical',
+                $minPct < 75 => 'warning',
+                default => 'safe',
+            };
+
+            $table[(int) $tubeNumber] = ['pct' => $pctByPoint, 'status' => $status];
+        }
+
+        return $table;
     }
 
     /**

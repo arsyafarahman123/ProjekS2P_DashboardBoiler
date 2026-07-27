@@ -311,6 +311,56 @@
       </div>
     </div>
 
+    <div class="bg-panel rounded-lg p-4 mb-5">
+      <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div class="text-xs font-bold tracking-wide">KETEBALAN PER TITIK (JENIS PIPA A&ndash;D) &mdash; TUBE 1&ndash;{{ $pshTotal }}</div>
+        <div class="flex items-center gap-3 text-[10px] text-slate-400">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-safe"></span> 100%&ndash;75% AMAN</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-watch"></span> &lt;75%&ndash;70% WARNING</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-critical"></span> &lt;70% CRITICAL</span>
+        </div>
+      </div>
+      <div class="overflow-x-auto" style="max-height:420px; overflow-y:auto;">
+        <table class="w-full text-[11px]">
+          <thead class="text-slate-400 sticky top-0 bg-[#0e2038]">
+            <tr class="text-left">
+              <th class="font-normal pb-2 pr-3">TUBE #</th>
+              @foreach($pointNames as $p)
+                <th class="font-normal pb-2 pr-3">TITIK {{ $p }}</th>
+              @endforeach
+              <th class="font-normal pb-2">STATUS</th>
+            </tr>
+          </thead>
+          <tbody class="text-slate-200">
+            @for($i=1; $i<=$pshTotal; $i++)
+              @php
+                $row = $pointsTable[$i] ?? null;
+                $rowStatusClass = match ($row['status'] ?? null) {
+                    'critical' => 'text-critical',
+                    'warning' => 'text-watch',
+                    'safe' => 'text-safe',
+                    default => 'text-slate-500',
+                };
+              @endphp
+              <tr id="point-row-{{ $i }}" class="border-t border-white/5 cursor-pointer hover:bg-white/[0.04]"
+                  @click="selectPshTube({{ $i }}, $event); $el.scrollIntoView({block:'nearest'})">
+                <td class="py-1.5 pr-3 font-semibold">{{ $i }}</td>
+                @foreach($pointNames as $p)
+                  @php
+                    $pct = $row['pct'][$p] ?? null;
+                    $cellClass = $pct === null ? 'text-slate-500'
+                        : ($pct < 70 ? 'text-critical font-semibold' : ($pct < 75 ? 'text-watch font-semibold' : 'text-safe'));
+                  @endphp
+                  <td class="py-1.5 pr-3 {{ $cellClass }}">{{ $pct !== null ? $pct.'%' : '—' }}</td>
+                @endforeach
+                <td class="py-1.5 font-semibold {{ $rowStatusClass }}">{{ strtoupper($row['status'] ?? 'N/A') }}</td>
+              </tr>
+            @endfor
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="grid grid-cols-3 gap-5 mb-5">
       <div class="bg-panel rounded-lg p-4">
         <div class="text-xs font-bold tracking-wide mb-3">LEGENDA STATUS</div>
@@ -452,6 +502,14 @@ function tubeDashboard() {
     selectPshTube(no, event) {
       this.selected = { no, id: SECTION_CODE + '-U3A-' + String(no).padStart(2, '0') };
 
+      // Sorot baris data titik A-D punya tube ini di tabel bawah.
+      document.querySelectorAll('.point-row-active').forEach(el => el.classList.remove('point-row-active', 'bg-white/10'));
+      const row = document.getElementById('point-row-' + no);
+      if (row) {
+        row.classList.add('point-row-active', 'bg-white/10');
+        row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }
+
       const btn = event.currentTarget;
       const container = btn.closest('.relative');
       if (!container) return;
@@ -478,8 +536,18 @@ function tubeDashboard() {
 
 document.addEventListener("DOMContentLoaded", function () {
   const ctx = document.getElementById("creepChart");
-  const labels = @json($creepTrend->pluck("year"));
-  const data = @json($creepTrend->pluck("creep_pct"));
+  const pshTotal = {{ $pshTotal }};
+
+  // Sumbu X = nomor tube 1..{{ $pshTotal }}, sumbu Y = ketebalan (mm),
+  // diambil dari AVG ketebalan 5 tahun tiap tube (TUBE_THICKNESS_STATS,
+  // sudah dihitung server-side dari data dummy asli).
+  const labels = [];
+  const data = [];
+  for (let i = 1; i <= pshTotal; i++) {
+    labels.push(i);
+    const stat = TUBE_THICKNESS_STATS[i];
+    data.push(stat ? stat.avg : null);
+  }
 
   new Chart(ctx, {
     type: "line",
@@ -490,16 +558,24 @@ document.addEventListener("DOMContentLoaded", function () {
         borderColor: "#f87171",
         backgroundColor: "rgba(56,102,163,0.35)",
         fill: true,
-        tension: 0.35,
-        pointBackgroundColor: "#38bdf8",
-        pointRadius: 4,
+        tension: 0.2,
+        pointRadius: 0,
+        spanGaps: true,
       }]
     },
     options: {
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: "#94a3b8" }, grid: { color: "rgba(255,255,255,0.05)" } },
-        y: { ticks: { color: "#94a3b8" }, grid: { color: "rgba(255,255,255,0.05)" } },
+        x: {
+          title: { display: true, text: "NOMOR TUBE (1-" + pshTotal + ")", color: "#94a3b8" },
+          ticks: { color: "#94a3b8", maxTicksLimit: 10 },
+          grid: { color: "rgba(255,255,255,0.05)" },
+        },
+        y: {
+          title: { display: true, text: "KETEBALAN (MM)", color: "#94a3b8" },
+          ticks: { color: "#94a3b8" },
+          grid: { color: "rgba(255,255,255,0.05)" },
+        },
       }
     }
   });

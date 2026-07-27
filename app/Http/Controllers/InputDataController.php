@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\BoilerArea;
 use App\Models\BoilerTube;
+use App\Models\RlaDocument;
 use App\Models\TubeBaseline;
 use App\Models\TubeMeasurement;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 // Menu Input Data (khusus admin), berisi tiga pilihan:
 //   - add/delete pipa  : menambah / mengurangi jumlah pipa sebuah area
@@ -374,5 +376,59 @@ class InputDataController extends Controller
                 : [],
             'measured_at' => $pts?->first(fn ($m) => $m->measured_at)?->measured_at?->format('Y-m-d'),
         ];
+    }
+
+    // ---------- Upload Dokumen RLA ----------
+
+    public function rla()
+    {
+        $documents = RlaDocument::orderBy('created_at', 'desc')->get();
+
+        return view('admin.input-data.rla', [
+            'units' => BoilerTube::UNITS,
+            'documents' => $documents,
+        ]);
+    }
+
+    public function rlaStore(Request $request)
+    {
+        $data = $request->validate([
+            'unit' => 'required|string|in:' . implode(',', BoilerTube::UNITS),
+            'tanggal' => 'required|date',
+            'file_rla' => 'required|file|mimes:pdf,xlsx,xls,csv|max:20480',
+        ]);
+
+        $file = $request->file('file_rla');
+        $path = $file->store('rla_documents');
+
+        RlaDocument::create([
+            'unit' => $data['unit'],
+            'tanggal' => $data['tanggal'],
+            'nama_file' => $file->getClientOriginalName(),
+            'path' => $path,
+        ]);
+
+        return redirect()
+            ->route('input-data.rla')
+            ->with('status', "Dokumen RLA {$data['unit']} tanggal {$data['tanggal']} berhasil diupload.");
+    }
+
+    public function rlaDownload(RlaDocument $document)
+    {
+        if (! Storage::exists($document->path)) {
+            abort(404, 'File tidak ditemukan.');
+        }
+
+        return Storage::download($document->path, $document->nama_file);
+    }
+
+    public function rlaDestroy(RlaDocument $document)
+    {
+        Storage::delete($document->path);
+        $document->delete();
+
+        return redirect()
+            ->route('input-data.rla')
+            ->with('status', "Dokumen {$document->nama_file} berhasil dihapus.");
     }
 }
