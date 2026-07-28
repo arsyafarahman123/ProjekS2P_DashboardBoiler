@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BoilerArea;
+use App\Models\BoilerImage;
 use App\Models\BoilerTube;
 use App\Models\TubeBaseline;
 use App\Models\TubeMeasurement;
@@ -46,20 +47,46 @@ class TubeMappingController extends Controller
             ->where('year', $year)
             ->get();
 
-        // Peta nomor tube -> status (buat warnain kotak grid). tube_id
-        // formatnya "KODE-U3A-01", jadi angka di belakang diambil sebagai
-        // nomor tube.
-        $statusByTubeNumber = $tubes->mapWithKeys(function ($t) {
-            preg_match('/(\d+)$/', $t->tube_id, $m);
-
-            return $m ? [(int) $m[1] => $t->status] : [];
-        });
-
         $creepByTubeNumber = $tubes->mapWithKeys(function ($t) {
             preg_match('/(\d+)$/', $t->tube_id, $m);
 
             return $m ? [(int) $m[1] => $t->creep_pct] : [];
         });
+
+        // ===================================================================
+        // DATA TITIK UKUR A,B,C,D + STATUS + WARNA — SEMUA dari perhitungan
+        // formula: (nilai − min_allowable) / (awal − min_allowable) × 100%
+        //
+        // Status per tube ditentukan oleh TITIK TERENDAH (MIN) dari keempat
+        // titik A,B,C,D. Threshold:
+        //   ≥75% → SAFE (hijau)
+        //   70–74.99% → WARNING (kuning)
+        //   <70% → CRITICAL (merah)
+        //
+        // Ini menentukan: warna grid, status popup, dan STATUS kolom di
+        // tabel Ketebalan per Titik. Semua pakai aturan yang sama.
+        // ===================================================================
+        $pointData = $this->pointDataForSection($unit, $section);
+
+        // peta [tube_number => 'Safe'|'Warning'|'Critical'] — warna grid kotak
+        $statusByTubeNumber = collect($pointData)->mapWithKeys(fn ($d, $no) => [
+            (int) $no => $d['status'],
+        ]);
+
+        // peta [tube_number => [pct => ..., status => ..., points => ..., avg_mm => ...]]
+        // dipakai popup (REMAINING %) dan tabel per-titik
+        $pointMeasurements = $pointData;
+
+        // Summary legenda: Safe% / Warning% / Critical%
+        $total = max(count($pointData), 1);
+        $safeCount = collect($pointData)->where('status', 'Safe')->count();
+        $warningCount = collect($pointData)->where('status', 'Warning')->count();
+        $criticalCount = collect($pointData)->where('status', 'Critical')->count();
+        $summary = [
+            'safe_pct' => round($safeCount / $total * 100),
+            'watch_pct' => round($warningCount / $total * 100),
+            'critical_pct' => round($criticalCount / $total * 100),
+        ];
 
         // Grid Primary Superheater Unit 3A: jumlah slot & susunan titik ukur
         // mengikuti pengaturan area (menu admin Input Data).
@@ -76,26 +103,14 @@ class TubeMappingController extends Controller
             ->map(fn ($rows) => $rows->keyBy('point'));
 
         // Statistik MIN/MAX/AVG ketebalan dinding tube selama 5 tahun
-        // (2021-2025), dihitung langsung dari data dummy excel/CSV yang
-        // sama dipakai seeder — supaya angka di popup tube-mapping selalu
-        // sinkron dengan data dummy Unit 3A 2021-2025 aslinya.
+        // (2021-2025), dihitung langsung dari data dummy excel/CSV.
         $tubeThicknessStats = $this->thicknessStatsForSection($unit, $section);
 
-        // Tabel titik ukur A-D per tube (persen ketebalan sisa terhadap
-        // baseline). 100-75% = SAFE, 75-70% = WARNING, <70% = CRITICAL.
-        // Satu titik di bawah 70% sudah cukup bikin tube itu CRITICAL,
-        // walau titik lain masih tinggi (MIN yang menentukan risiko).
-        $pointsTable = $this->pointsTableForSection($unit, $section);
+        // Tabel per-titik A-D dipakai di view sebagai $pointsTable
+        $pointsTable = $pointData;
         $pointNames = TubeMeasurement::POINTS;
 
         $sectionCode = BoilerTube::SECTION_CODES[$section] ?? strtoupper(substr($section, 0, 3));
-
-        $total = $tubes->count();
-        $summary = [
-            'safe_pct' => $total ? round($tubes->where('status', 'Safe')->count() / $total * 100) : 0,
-            'watch_pct' => $total ? round($tubes->where('status', 'Watch')->count() / $total * 100) : 0,
-            'critical_pct' => $total ? round($tubes->where('status', 'Critical')->count() / $total * 100) : 0,
-        ];
 
         $topPriority = BoilerTube::query()
             ->where('year', $year)
@@ -130,24 +145,34 @@ class TubeMappingController extends Controller
             ->orderBy('year')
             ->get();
 
+        $boilerImages = BoilerImage::where('unit', $unit)->orderByDesc('created_at')->get();
+
         return view('tube-mapping.index', compact(
             'pshPoints', 'pshTotal', 'pshPointNames', 'summary', 'topPriority',
             'historicalNdt', 'creepTrend', 'units', 'sections', 'years',
             'unit', 'section', 'year', 'statusByTubeNumber', 'tubeThicknessStats', 'creepByTubeNumber', 'sectionCode',
-            'pointsTable', 'pointNames'
+            'pointsTable', 'pointNames', 'boilerImages', 'pointMeasurements'
         ));
     }
 
     /**
-     * Bangun tabel titik ukur A-D (persen ketebalan sisa vs baseline) per
-     * nomor tube untuk section+unit aktif, dari tube_measurements +
-     * tube_baselines. Dipakai buat tabel "Jenis Pipa per Titik A-D" di
-     * bawah grafik creep, dan buat cari status per-titik (warna merah
-     * kalau ada 1 titik < 70%).
+     * Data lengkap per tube: nilai A,B,C,D (mm & persen), rata-rata mm,
+     * persentase sisa umur, dan STATUS.
      *
-     * @return array<int, array{pct: array<string,float|null>, status: string}>
+     * Formula per titik:
+     *   % = (nilai_titik − min_allowable) / (awal − min_allowable) × 100%
+     *
+     * Formula REM./REMAINING (rata-rata):
+     *   % = (avg(A,B,C,D) − min_allowable) / (awal − min_allowable) × 100%
+     *
+     * Status tube = MIN dari keempat titik:
+     *   ≥75% → Safe (hijau)
+     *   70–74.99% → Warning (kuning)
+     *   <70% → Critical (merah)
+     *
+     * @return array<int, array{points:array<string,float|null>, pct:array<string,float|null>, avg_mm:float|null, remaining_pct:float|null, status:string}>
      */
-    private function pointsTableForSection(string $unit, string $section): array
+    private function pointDataForSection(string $unit, string $section): array
     {
         $pointNames = TubeMeasurement::POINTS;
 
@@ -155,41 +180,71 @@ class TubeMappingController extends Controller
             ->where('section', $section)
             ->pluck('initial_thickness_mm', 'tube_number');
 
+        $minAllowables = $this->minAllowableFromCsv($unit, $section);
+
         $measurements = TubeMeasurement::where('unit', $unit)
             ->where('section', $section)
             ->get()
             ->groupBy('tube_number');
 
-        $table = [];
+        $result = [];
         foreach ($measurements as $tubeNumber => $rows) {
             $baseline = $baselines[$tubeNumber] ?? null;
-            $pctByPoint = [];
+            $minAllowable = $minAllowables[$tubeNumber] ?? null;
+
+            $pointsMm = [];   // nilai mm asli
+            $pointsPct = [];  // nilai persen per titik
             foreach ($pointNames as $p) {
                 $row = $rows->firstWhere('point', $p);
-                $pctByPoint[$p] = ($row && $baseline) ? round($row->thickness_mm / $baseline * 100, 1) : null;
+                $mm = $row ? round($row->thickness_mm, 2) : null;
+                $pointsMm[$p] = $mm;
+
+                // % per titik: (nilai − min_allowable) / (awal − min_allowable)
+                if ($mm !== null && $baseline && $minAllowable && $baseline > $minAllowable) {
+                    $pctVal = round(($mm - $minAllowable) / ($baseline - $minAllowable) * 100, 2);
+                    $pointsPct[$p] = max(0, min(100, $pctVal));
+                } else {
+                    $pointsPct[$p] = null;
+                }
             }
 
-            $validPct = array_filter($pctByPoint, fn ($v) => $v !== null);
+            // Rata-rata mm
+            $validMm = array_filter($pointsMm, fn ($v) => $v !== null);
+            $avgMm = $validMm ? round(array_sum($validMm) / count($validMm), 2) : null;
+
+            // REM./REMAINING % = (avg_mm − min_allowable) / (awal − min_allowable)
+            $remainingPct = null;
+            if ($avgMm && $baseline && $minAllowable && $baseline > $minAllowable) {
+                $remainingPct = round(($avgMm - $minAllowable) / ($baseline - $minAllowable) * 100, 2);
+                $remainingPct = max(0, min(100, $remainingPct));
+            }
+
+            // Status ditentukan dari TITIK TERENDAH (MIN dari keempat % titik)
+            $validPct = array_filter($pointsPct, fn ($v) => $v !== null);
             $minPct = $validPct ? min($validPct) : null;
             $status = match (true) {
-                $minPct === null => 'unknown',
-                $minPct < 70 => 'critical',
-                $minPct < 75 => 'warning',
-                default => 'safe',
+                $minPct === null => 'N/A',
+                $minPct < 70 => 'Critical',
+                $minPct < 75 => 'Warning',
+                default => 'Safe',
             };
 
-            $table[(int) $tubeNumber] = ['pct' => $pctByPoint, 'status' => $status];
+            $result[(int) $tubeNumber] = [
+                'points' => $pointsMm,
+                'pct' => $pointsPct,         // % per titik — dipakai view tabel
+                'avg_mm' => $avgMm,
+                'remaining_pct' => $remainingPct, // % REM./REMAINING — dipakai popup
+                'status' => $status,                   // Safe/Warning/Critical — GRID + STATUS kolom
+            ];
         }
 
-        return $table;
+        return $result;
     }
 
     /**
-     * Baca database/seeders/data/tube_dummy_2021_2025.csv (data dummy asli
-     * Unit 3A 2021-2025) dan hitung MIN / MAX / AVG "Wall Thickness Terukur"
-     * per nomor tube untuk satu unit+section, dari seluruh tahun yang ada.
-     *
-     * @return array<int, array{min: float, max: float, avg: float, years: int}>
+     * Baca database/seeders/data/tube_dummy_2021_2025.csv dan hitung
+     * MIN / MAX / AVG "Wall Thickness Terukur" per nomor tube untuk
+     * satu unit+section, dari seluruh tahun yang ada.
      */
     private function thicknessStatsForSection(string $unit, string $section): array
     {
@@ -201,6 +256,7 @@ class TubeMappingController extends Controller
         $unitCsvLabel = strtoupper($unit); // csv nyimpen "UNIT 3A"
         $rowsByTube = [];
         $minAllowableByTube = [];
+        $baselineByTube = [];
 
         $handle = fopen($csvPath, 'r');
         $header = fgetcsv($handle);
@@ -212,6 +268,7 @@ class TubeMappingController extends Controller
             $tubeNumber = (int) $data['tube_number'];
             $rowsByTube[$tubeNumber][(int) $data['year']] = (float) $data['measured_thickness'];
             $minAllowableByTube[$tubeNumber] = (float) $data['min_allowable'];
+            $baselineByTube[$tubeNumber] = (float) $data['initial_thickness'];
         }
         fclose($handle);
 
@@ -219,21 +276,64 @@ class TubeMappingController extends Controller
         foreach ($rowsByTube as $tubeNumber => $byYear) {
             ksort($byYear);
             $values = array_values($byYear);
+            $minAllowable = $minAllowableByTube[$tubeNumber];
+            $baseline = $baselineByTube[$tubeNumber];
+            $rangeMm = $baseline - $minAllowable;
+
+            $minMm = min($values);
+            $maxMm = max($values);
+
+            // % pakai rumus & threshold YANG SAMA persis dengan status tube
+            // (remaining%: (nilai - min_allowable) / (awal - min_allowable) * 100),
+            // supaya warna MIN/MAX di popup selalu konsisten dengan STATUS.
+            $minPct = $rangeMm > 0 ? max(0, min(100, round(($minMm - $minAllowable) / $rangeMm * 100, 2))) : null;
+            $maxPct = $rangeMm > 0 ? max(0, min(100, round(($maxMm - $minAllowable) / $rangeMm * 100, 2))) : null;
+
             $stats[$tubeNumber] = [
-                'min' => round(min($values), 2),
-                'max' => round(max($values), 2),
+                'min' => round($minMm, 2),
+                'max' => round($maxMm, 2),
                 'avg' => round(array_sum($values) / count($values), 2),
                 'years' => count($values),
-                // Angka asli per tahun (bukan titik A/B/C/D karangan) —
-                // dipakai buat tampilin "titik pengukuran" yang jujur di popup.
                 'by_year' => $byYear,
-                // Batas ketebalan minimum yang masih boleh (dari kolom
-                // "Minimum Allowable Thickness" di excel) — acuan aman/kritis.
-                'min_allowable' => round($minAllowableByTube[$tubeNumber], 2),
+                'min_allowable' => round($minAllowable, 2),
+                'baseline' => round($baseline, 2),
+                'min_pct' => $minPct,
+                'max_pct' => $maxPct,
             ];
         }
 
         return $stats;
+    }
+
+    /**
+     * Baca kolom Minimum Allowable Thickness dari CSV per nomor tube
+     * untuk satu unit+section.
+     */
+    private function minAllowableFromCsv(string $unit, string $section): array
+    {
+        $csvPath = database_path('seeders/data/tube_dummy_2021_2025.csv');
+        if (! file_exists($csvPath)) {
+            return [];
+        }
+
+        $unitCsvLabel = strtoupper($unit);
+        $result = [];
+
+        $handle = fopen($csvPath, 'r');
+        $header = fgetcsv($handle);
+        while (($row = fgetcsv($handle)) !== false) {
+            $data = array_combine($header, $row);
+            if (strtoupper($data['unit']) !== $unitCsvLabel || $data['section'] !== $section) {
+                continue;
+            }
+            $tn = (int) $data['tube_number'];
+            if (! isset($result[$tn])) {
+                $result[$tn] = (float) $data['min_allowable'];
+            }
+        }
+        fclose($handle);
+
+        return $result;
     }
 
     public function show(string $tubeId)

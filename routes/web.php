@@ -99,4 +99,8 @@ Route::middleware('auth')->prefix('input_data')->name('input-data.')->group(func
     Route::post('/rla', [InputDataController::class, 'rlaStore'])->name('rla.store');
     Route::get('/rla/download/{document}', [InputDataController::class, 'rlaDownload'])->name('rla.download');
     Route::delete('/rla/{document}', [InputDataController::class, 'rlaDestroy'])->name('rla.destroy');
-});
+
+    Route::get('/image', [InputDataController::class, 'image'])->name('image');
+    Route::post('/image', [InputDataController::class, 'imageStore'])->name('image.store');
+    Route::delete('/image/{image}', [InputDataController::class, 'imageDestroy'])->name('image.destroy');
+}); 

@@ -162,7 +162,9 @@ class TubeMeasurementSeeder extends Seeder
         mt_srand(crc32($seed));
 
         $values = [];
-        $spread = 0.15; // variasi maksimum tiap titik, dalam mm
+        $spread = 0.02; // variasi maksimum tiap titik, dalam mm (dikecilkan dari 0.15
+                         // supaya status MIN-dari-4-titik tidak "kelempar" keluar dari
+                         // band Safe/Warning/Critical yang seharusnya cuma karena noise acak)
         for ($i = 0; $i < $count - 1; $i++) {
             $offset = (mt_rand(-100, 100) / 100) * $spread;
             $values[] = $avgTarget + $offset;
@@ -182,7 +184,7 @@ class TubeMeasurementSeeder extends Seeder
     {
         return match (true) {
             $creepPct > 80 => 'Critical',
-            $creepPct >= 40 => 'Watch',
+            $creepPct >= 40 => 'Warning',
             default => 'Safe',
         };
     }

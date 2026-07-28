@@ -340,7 +340,7 @@
     letter-spacing:0.5px;
   }
   .rul-badge.critical{ background:rgba(229,72,77,0.18); color:#ff8a8e; }
-  .rul-badge.watch{ background:rgba(224,194,60,0.18); color:#e8d268; }
+  .rul-badge.warning{ background:rgba(224,194,60,0.18); color:#e8d268; }
   .rul-badge.safe{ background:rgba(63,220,132,0.18); color:#3fdc84; }
 
   /* bottom row */
@@ -564,7 +564,7 @@
           </div>
           <div class="legend-boxes">
             <span><i style="background:#3fdc84"></i>SAFE</span>
-            <span><i style="background:#e0c23c"></i>WATCH</span>
+            <span><i style="background:#e0c23c"></i>WARNING</span>
             <span><i style="background:#ff4d4f"></i>CRITICAL</span>
           </div>
         </div>
@@ -577,37 +577,17 @@
             <span class="tag">RUL-01</span>
           </div>
           <table class="rul-table">
-            <tr><th>TUBE ID</th><th>SECTION</th><th>RUL</th><th>STATUS</th></tr>
+            <tr><th>TUBE ID</th><th>SECTION</th><th>RUL</th><th>%</th><th>GRADE</th><th>STATUS</th></tr>
+            @foreach($data['rul_table'] as $row)
             <tr>
-              <td class="tube-id">SH-2-R12-T18</td>
-              <td>Sec. Superheater</td>
-              <td>1 mo</td>
-              <td><span class="rul-badge critical">CRITICAL</span></td>
+              <td class="tube-id">{{ $row['tube_id'] }}</td>
+              <td>{{ $row['section'] }}</td>
+              <td>{{ $row['rul_months'] }} mo</td>
+              <td>{{ $row['pct'] }}%</td>
+              <td>{{ $row['grade'] }}</td>
+              <td><span class="rul-badge {{ $row['status'] }}">{{ strtoupper($row['status']) }}</span></td>
             </tr>
-            <tr>
-              <td class="tube-id">SH-2-R12-T15</td>
-              <td>Sec. Superheater</td>
-              <td>14 mo</td>
-              <td><span class="rul-badge watch">WATCH</span></td>
-            </tr>
-            <tr>
-              <td class="tube-id">SH-1-R09-T22</td>
-              <td>Pri. Superheater</td>
-              <td>37 mo</td>
-              <td><span class="rul-badge watch">WATCH</span></td>
-            </tr>
-            <tr>
-              <td class="tube-id">RH-1-R05-T09</td>
-              <td>Reheater</td>
-              <td>94 mo</td>
-              <td><span class="rul-badge safe">SAFE</span></td>
-            </tr>
-            <tr>
-              <td class="tube-id">EC-3-R02-T04</td>
-              <td>Economizer</td>
-              <td>132 mo</td>
-              <td><span class="rul-badge safe">SAFE</span></td>
-            </tr>
+            @endforeach
           </table>
         </div>
 
@@ -642,8 +622,9 @@
         <h2>HISTORICAL NDT</h2>
         <table class="ndt">
           <tr><th>Date</th><th>Tube ID</th><th>Creep %</th></tr>
-          <tr><td>2019-06</td><td class="tube-id">SH-2-R12-T18</td><td class="creep">15.5%</td></tr>
-          <tr><td>2028-10</td><td class="tube-id">SH-2-R12-T18</td><td class="creep">15.5%</td></tr>
+          @foreach($data['historical_ndt'] as $ndt)
+          <tr><td>{{ $ndt['date'] }}</td><td class="tube-id">{{ $ndt['tube_id'] }}</td><td class="creep">{{ $ndt['creep'] }}%</td></tr>
+          @endforeach
         </table>
       </div>
 
