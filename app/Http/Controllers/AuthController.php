@@ -28,7 +28,7 @@ class AuthController extends Controller
 
             return redirect()->intended(route('global-view'));
         }
-        
+
         return back()
             ->withErrors(['email' => 'Username atau password salah.'])
             ->onlyInput('email');

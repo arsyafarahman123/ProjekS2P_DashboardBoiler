@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RlaDocument;
 use Illuminate\Http\Request;
 
 class RlaAnalysisController extends Controller
@@ -41,6 +42,9 @@ class RlaAnalysisController extends Controller
 
         $data = $this->generateDummyData($section, $unit, $year);
 
+        // Dokumen RLA yang relevan dengan unit & tahun terpilih
+        $documents = $this->getRelatedDocuments($unit, $year);
+
         return view('rla-analysis.index', [
             'boilerSections' => $this->boilerSections,
             'units'          => $this->units,
@@ -49,7 +53,28 @@ class RlaAnalysisController extends Controller
             'selectedUnit'    => $unit,
             'selectedYear'    => $year,
             'data'            => $data,
+            'documents'       => $documents,
         ]);
+    }
+
+    /**
+     * Ambil dokumen RLA terkait dari database berdasarkan unit & tahun.
+     * Unit di halaman RLA Analysis ("1&2", "3", "3A") dipetakan ke format
+     * penyimpanan ("Unit 1", "Unit 2", "Unit 3", "Unit 3A").
+     */
+    protected function getRelatedDocuments(string $unit, int $year)
+    {
+        $dbUnits = match ($unit) {
+            '1&2' => ['Unit 1', 'Unit 2'],
+            '3'   => ['Unit 3'],
+            '3A'  => ['Unit 3A'],
+            default => [$unit],
+        };
+
+        return RlaDocument::whereIn('unit', $dbUnits)
+            ->whereYear('tanggal', $year)
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 
     /**
@@ -181,63 +206,9 @@ class RlaAnalysisController extends Controller
             ['date' => ($year + 2) . '-10', 'tube_id' => $tubeId, 'creep' => $currentCreep],
         ];
 
-        // --- RUL table with grades (A/B/C/D dari persentase ketebalan sisa) ---
-        // Threshold: A = 75-100% (Safe), B = 70-75% (Warning), C = 50-70% (Critical), D = <50% (Severe)
-        $rulTable = [];
-        $rulSections = ['Sec. Superheater', 'Pri. Superheater', 'Reheater', 'Economizer'];
-        // Predefined pct ranges per row to guarantee SAFE, WARNING, and CRITICAL all appear
-        $pctRanges = [
-            [78, 98],   // Row 0: SAFE (A)  — 75-100%
-            [70, 74.9], // Row 1: WARNING (B) — <75%–70%
-            [60, 69],   // Row 2: CRITICAL (C) — <70% (medium)
-            [50, 59],   // Row 3: CRITICAL (C) — <70% (low)
-            [40, 49],   // Row 4: CRITICAL (D) — <50% (severe)
-        ];
-        for ($i = 0; $i < 5; $i++) {
-            $pct = round(mt_rand((int)($pctRanges[$i][0] * 10), (int)($pctRanges[$i][1] * 10)) / 10, 1);
-            $grade = match(true) {
-                $pct >= 75 => 'A',
-                $pct >= 70 => 'B',
-                $pct >= 50 => 'C',
-                default => 'D',
-            };
-            $status = match($grade) {
-                'A' => 'safe',
-                'B' => 'warning',
-                'C', 'D' => 'critical',
-                default => 'critical',
-            };
-            $rulMonths = match($grade) {
-                'A' => mt_rand(60, 180),
-                'B' => mt_rand(30, 60),
-                'C' => mt_rand(6, 30),
-                'D' => mt_rand(1, 6),
-                default => 12,
-            };
-            $sectionCodes = ['SH-2', 'SH-1', 'RH', 'ECO', 'WW'];
-            $sc = $sectionCodes[$i % count($sectionCodes)];
-            $rulTable[] = [
-                'tube_id' => sprintf('%s-R%02d-T%02d', $sc, mt_rand(1, 20), mt_rand(1, 30)),
-                'section' => $rulSections[$i % count($rulSections)],
-                'rul_months' => $rulMonths,
-                'pct' => $pct,
-                'grade' => $grade,
-                'status' => $status,
-            ];
-        }
-
         // --- NDT report panel ---
         $findings = ['DETECTED CORROSION / PITTING', 'DETECTED WALL THINNING', 'DETECTED CREEP CAVITATION', 'NO SIGNIFICANT FINDINGS'];
         $finding = $risk > 1 ? $findings[array_rand(array_slice($findings, 0, 3))] : $findings[array_rand($findings)];
-
-        // Selected tube percentage & grade
-        $selectedPct = round(max(45, min(98, 90 - ($risk * 15) + mt_rand(-8, 8))), 1);
-        $selectedGrade = match(true) {
-            $selectedPct >= 75 => 'A',
-            $selectedPct >= 70 => 'B',
-            $selectedPct >= 50 => 'C',
-            default => 'D',
-        };
 
         return [
             'status'          => $status,
@@ -262,11 +233,8 @@ class RlaAnalysisController extends Controller
                 'values'  => $creepValues,
                 'current' => $currentCreep,
             ],
-            'historical_ndt'  => $historicalNdt,
-            'ndt_finding'     => $finding,
-            'rul_table'       => $rulTable,
-            'selected_pct'    => $selectedPct,
-            'selected_grade'  => $selectedGrade,
+            'historical_ndt' => $historicalNdt,
+            'ndt_finding'    => $finding,
         ];
     }
 }

@@ -58,20 +58,17 @@ class BoilerTube extends Model
 
     const STATUS_COLOR = [
         'Safe'     => '#22c55e',
-        'Warning'  => '#eab308',
+        'Watch'    => '#eab308',
         'Critical' => '#ef4444',
     ];
 
-    // % di sini adalah REMAINING % (bukan creep lama), sesuai formula:
-    // (terukur - min_allowable) / (awal - min_allowable) * 100
-    // >=75% Safe, 70-74.99% Warning, <70% Critical.
-    public static function statusFromRemainingPct(float $remainingPct): string
+    public static function statusFromCreep(float $creep): string
     {
-        if ($remainingPct < 70) {
+        if ($creep > 80) {
             return 'Critical';
         }
-        if ($remainingPct < 75) {
-            return 'Warning';
+        if ($creep >= 40) {
+            return 'Watch';
         }
 
         return 'Safe';
@@ -81,7 +78,7 @@ class BoilerTube extends Model
     {
         return match ($status) {
             'Critical' => 'REPLACE IMMEDIATELY',
-            'Warning' => 'REPLACE NEXT SHUTDOWN',
+            'Watch' => 'REPLACE NEXT SHUTDOWN',
             default => 'MONITOR',
         };
     }

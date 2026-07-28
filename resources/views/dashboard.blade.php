@@ -1,13 +1,14 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="csrf-token" content="{{ csrf_token() }}">
-<title>S2P PLTU Cilacap — Boiler 3D Digital Twin</title>
+@extends('layouts.dashboard')
+
+@section('title', 'S2P PLTU Cilacap — Boiler 3D Digital Twin')
+
+@push('head')
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+@endpush
+
+@push('styles')
 <style>
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
@@ -21,81 +22,8 @@
         background-attachment: fixed;
         position: relative;
     }
-    .layout { display:flex; background:#050b1a; min-height:100vh; font-family:'Inter',sans-serif; }
-    /* SIDEBAR */
-    .sidebar{
-        width:72px;
-        min-width:72px;
-        background:linear-gradient(180deg, #0a1729 0%, #0d2038 100%);
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        padding-top:14px;
-        padding-bottom:14px;
-        gap:20px;
-        position:sticky; top:0; height:100vh;
-        overflow-y:auto;
-        overflow-x:hidden;
-        scrollbar-width:thin;
-        scrollbar-color:#2a4a6e transparent;
-    }
-    .sidebar::-webkit-scrollbar{ width:4px; }
-    .sidebar::-webkit-scrollbar-thumb{ background:#2a4a6e; border-radius:4px; }
-    .sidebar-nav{ padding-bottom:12px; }
-    .logo-box .logo-text{
-        font-family:'Poppins',sans-serif;
-        font-weight:800;
-        font-size:15px;
-        letter-spacing:.5px;
-        color:#e0a940;
-        line-height:1;
-    }
-    .sidebar .logo-box{
-        width:52px;
-        height:52px;
-        overflow:hidden;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        flex-shrink:0;
-    }
-    .logo-box img{ 
-        width:100%; 
-        height:100%; 
-        object-fit:contain; 
-        display:block; 
-    } 
-    .sidebar-nav{ display:flex; 
-        flex-direction:column; 
-        gap:18px; 
-        margin-top:8px; 
-        align-items:center;
-    }
-    .sidebar-nav .nav-item{
-        writing-mode:vertical-rl;
-        transform:rotate(180deg);
-        font-size:10px;
-        letter-spacing:1.5px;
-        font-weight:600;
-        color:#6d7f96;
-        position:relative;
-        padding:4px 8px 4px 0;
-        border-right:3px solid transparent;
-        cursor:pointer;
-        text-decoration:none;
-    }
-    .sidebar-nav .nav-item.active{
-        color:#fff;
-        border-right-color:#e0a940;
-    }
-    .main { flex:1; padding:0; }
-    .page-panel {
-        position: relative;
-        min-height: 100vh;
-        background: linear-gradient(120deg, #64798f 0%, #586C82 45%, #46586c 100%);
-        padding: 22px 26px;
-        overflow: hidden;
-    }
+    /* Outer .main padding/background is now the shared class in
+       dashboard-shared.css — single source of truth across all pages. */
     .section-block {
         position: relative;
         padding: 18px 0;
@@ -169,40 +97,10 @@
         border:0; border-radius:4px; display:block; background:#0d2140;
     }
 </style>
-</head>
-<body>
-<div class="layout">
-    <div class="sidebar">
-    <div class="logo-box">
-        <img src="{{ asset('images/logo.png') }}" alt="S2P Logo">
-    </div>
-<div class="sidebar-nav">
+@endpush
 
-    <a href="{{ route('global-view') }}" class="nav-item active">
-        GLOBAL VIEW
-    </a>
-
-   <a href="{{ route('tube.mapping') }}" class="nav-item">
-        TUBE MAPPING
-     </a>
-
-    <a href="{{ route('rla-analysis') }}" class="nav-item">
-        RLA ANALYSIS
-    </a>
-
-    <a href="{{ route('maintenance') }}" class="nav-item">
-        MAINTENANCE
-    </a>
-
-    <a href="{{ route('input-data.index') }}" class="nav-item">
-        INPUT DATA
-    </a>
-
-</div>
-</div>
-
-    <div class="main">
-    <div class="page-panel">
+@section('content')
+    <main class="main">
         <div class="section-block" style="padding-top:2px;">
             <div class="glow-orb" style="width:260px;height:260px;background:#e0a940;opacity:.05;top:-100px;right:-60px;"></div>
             <div class="glow-orb" style="width:220px;height:220px;background:#7fd4e8;opacity:.06;bottom:-90px;left:-40px;"></div>
@@ -284,8 +182,8 @@
                             <span style="color:{{ $statusColor['Safe'] }};font-weight:800;font-size:12.5px;letter-spacing:.3px;">SAFE &lt;40%</span>
                         </span>
                         <span style="display:flex;align-items:center;gap:9px;">
-                            <span style="width:14px;height:14px;border-radius:4px;background:{{ $statusColor['Warning'] }};flex-shrink:0;"></span>
-                            <span style="color:{{ $statusColor['Warning'] }};font-weight:800;font-size:12.5px;letter-spacing:.3px;">WARNING 70–74%</span>
+                            <span style="width:14px;height:14px;border-radius:4px;background:{{ $statusColor['Watch'] }};flex-shrink:0;"></span>
+                            <span style="color:{{ $statusColor['Watch'] }};font-weight:800;font-size:12.5px;letter-spacing:.3px;">WATCH 40–80%</span>
                         </span>
                         <span style="display:flex;align-items:center;gap:9px;">
                             <span style="width:14px;height:14px;border-radius:4px;background:{{ $statusColor['Critical'] }};flex-shrink:0;"></span>
@@ -307,9 +205,11 @@
             </div>
         </div>
     </div>
-    </div>
-</div>
+    </main>
 
+@endsection
+
+@push('scripts')
 <script>
 // ================= Konfigurasi dari server =================
 const STATUS_COLOR = @json($statusColor);
@@ -324,8 +224,8 @@ let focusedSection = null;
 
 // ================= Chart 2D (port build_risk_summary_fig & build_comparison_fig) =================
 function buildRiskBar(sectionSummary){
-    const statuses = ['Safe','Warning','Critical'];
-    const textColorMap = { Safe:'#06281a', Warning:'#2b1d00', Critical:'#ffffff' };
+    const statuses = ['Safe','Watch','Critical'];
+    const textColorMap = { Safe:'#06281a', Watch:'#2b1d00', Critical:'#ffffff' };
     const traces = statuses.map(status => {
         const key = status.toLowerCase();
         const y = sectionSummary.map(s => s[key]);
@@ -564,11 +464,7 @@ document.getElementById('risk-list').addEventListener('click', e => {
     renderRiskBar(lastPayload);
 });
 
-// Render data awal langsung dari payload yang sudah disiapkan server (tanpa fetch),
-// biar nggak ada jeda "Loading data..." pas pertama kali halaman dibuka.
-// fetch ke /api/boiler-data cuma jalan lagi kalau filter UNIT/TAHUN diganti.
 lastPayload = INITIAL_PAYLOAD;
 render(INITIAL_PAYLOAD);
 </script>
-</body>
-</html>
+@endpush

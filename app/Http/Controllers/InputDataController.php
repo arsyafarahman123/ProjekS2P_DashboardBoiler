@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\BoilerArea;
-use App\Models\BoilerImage;
 use App\Models\BoilerTube;
 use App\Models\RlaDocument;
 use App\Models\TubeBaseline;
@@ -396,7 +395,7 @@ class InputDataController extends Controller
         $data = $request->validate([
             'unit' => 'required|string|in:' . implode(',', BoilerTube::UNITS),
             'tanggal' => 'required|date',
-            'file_rla' => 'required|file|mimes:pdf,xlsx,xls,csv|max:20480',
+            'file_rla' => 'required|file|mimes:pdf,xlsx,xls,csv,png,jpg,jpeg|max:20480',
         ]);
 
         $file = $request->file('file_rla');
@@ -412,6 +411,15 @@ class InputDataController extends Controller
         return redirect()
             ->route('input-data.rla')
             ->with('status', "Dokumen RLA {$data['unit']} tanggal {$data['tanggal']} berhasil diupload.");
+    }
+
+    public function rlaFile(RlaDocument $document)
+    {
+        if (! Storage::exists($document->path)) {
+            abort(404, 'File tidak ditemukan.');
+        }
+
+        return Storage::response($document->path);
     }
 
     public function rlaDownload(RlaDocument $document)
@@ -431,56 +439,5 @@ class InputDataController extends Controller
         return redirect()
             ->route('input-data.rla')
             ->with('status', "Dokumen {$document->nama_file} berhasil dihapus.");
-    }
-
-    // ---------- Upload Gambar Boiler 3D Structure ----------
-
-    public function image(Request $request)
-    {
-        $unit = $request->get('unit', BoilerTube::DEFAULT_UNIT);
-        if (! in_array($unit, BoilerTube::UNITS, true)) {
-            $unit = BoilerTube::DEFAULT_UNIT;
-        }
-
-        $images = BoilerImage::where('unit', $unit)->orderByDesc('created_at')->get();
-        $allUnitImages = BoilerImage::orderByDesc('created_at')->get()->groupBy('unit');
-
-        return view('admin.input-data.image', [
-            'units' => BoilerTube::UNITS,
-            'unit' => $unit,
-            'images' => $images,
-            'allUnitImages' => $allUnitImages,
-        ]);
-    }
-
-    public function imageStore(Request $request)
-    {
-        $data = $request->validate([
-            'unit' => 'required|string|in:' . implode(',', BoilerTube::UNITS),
-            'file_image' => 'required|file|mimes:jpg,jpeg,png,gif,webp,pdf|max:20480',
-        ]);
-
-        $file = $request->file('file_image');
-        $path = $file->store('boiler_images', 'public');
-
-        BoilerImage::create([
-            'unit' => $data['unit'],
-            'nama_file' => $file->getClientOriginalName(),
-            'path' => $path,
-        ]);
-
-        return redirect()
-            ->route('input-data.image', ['unit' => $data['unit']])
-            ->with('status', "Gambar boiler {$data['unit']} berhasil diupload.");
-    }
-
-    public function imageDestroy(BoilerImage $image)
-    {
-        Storage::disk('public')->delete($image->path);
-        $image->delete();
-
-        return redirect()
-            ->route('input-data.image', ['unit' => $image->unit])
-            ->with('status', "Gambar {$image->nama_file} berhasil dihapus.");
     }
 }

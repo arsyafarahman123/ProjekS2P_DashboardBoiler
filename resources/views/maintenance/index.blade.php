@@ -1,8 +1,8 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<title>Maintenance - S2P Boiler Dashboard</title>
+@extends('layouts.dashboard')
+
+@section('title', 'Maintenance - S2P Boiler Dashboard')
+
+@push('head')
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
@@ -20,6 +20,9 @@
     }
   }
 </script>
+@endpush
+
+@push('styles')
 <style>
   body { font-family: ui-sans-serif, system-ui, sans-serif; }
   .bg-panel{
@@ -28,70 +31,6 @@
   }
   .rounded-lg{ border-radius:5px !important; }
   .accent-bar { width:4px; height:20px; background:#e0a940; border-radius:2px; flex-shrink:0; display:inline-block; }
-  main.flex-1{
-    background:linear-gradient(120deg, #64798f 0%, #586C82 45%, #46586c 100%);
-  }
-
-  .sidebar{
-    width:72px;
-    min-width:72px;
-    background:linear-gradient(180deg, #0a1729 0%, #0d2038 100%);
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    padding-top:14px;
-    padding-bottom:14px;
-    gap:20px;
-    position:sticky;
-    top:0;
-    align-self:flex-start;
-    height:100vh;
-    overflow-y:auto;
-    overflow-x:hidden;
-    scrollbar-width:thin;
-    scrollbar-color:#2a4a6e transparent;
-  }
-  .sidebar::-webkit-scrollbar{ width:4px; }
-  .sidebar::-webkit-scrollbar-thumb{ background:#2a4a6e; border-radius:4px; }
-  .sidebar .logo-box{
-    width:52px;
-    height:52px;
-    overflow:hidden;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex-shrink:0;
-  }
-  .sidebar-nav{
-    display:flex;
-    flex-direction:column;
-    gap:18px;
-    margin-top:8px;
-    align-items:center;
-    padding-bottom:12px;
-  }
-  .sidebar-nav .nav-item{
-    writing-mode:vertical-rl;
-    transform:rotate(180deg);
-    font-size:10px;
-    letter-spacing:1.5px;
-    font-weight:600;
-    color:#6d7f96;
-    position:relative;
-    padding:4px 8px 4px 0;
-    background:none;
-    border:none;
-    border-right:3px solid transparent;
-    cursor:pointer;
-    text-decoration:none;
-  }
-  .sidebar-nav .nav-item:hover{
-    color:#cbd5e1;
-  }
-  .sidebar-nav .nav-item.active{
-    color:#fff;
-    border-right-color:#e0a940;
-  }
 
   .header-logo-box{
     width:70px;
@@ -102,27 +41,13 @@
     justify-content:center;
     flex-shrink:0;
   }
-  body > div.flex{ min-height:100vh; }
 </style>
-</head>
-<body class="bg-bgnavy text-slate-200 min-h-screen">
+@endpush
 
-<div class="flex">
+@section('body-class', 'bg-bgnavy text-slate-200 min-h-screen')
 
-  <aside class="sidebar">
-    <div class="logo-box">
-      <img src="{{ asset('images/logo.png') }}" alt="S2P logo" class="w-full h-full object-contain">
-    </div>
-    <nav class="sidebar-nav">
-      <a href="{{ route('global-view') }}" class="nav-item">GLOBAL VIEW</a>
-      <a href="{{ route('tube.mapping') }}" class="nav-item">TUBE MAPPING</a>
-      <a href="{{ route('rla-analysis') }}" class="nav-item">RLA ANALYSIS</a>
-      <a href="{{ route('maintenance') }}" class="nav-item active">MAINTENANCE</a>
-      <a href="{{ route('input-data.index') }}" class="nav-item">INPUT DATA</a>
-    </nav>
-  </aside>
-
-  <main class="flex-1 p-6">
+@section('content')
+  <main class="main">
 
     <div class="flex items-center justify-between mb-5">
       <div class="flex items-center gap-[10px]">
@@ -150,7 +75,4 @@
     </div>
 
   </main>
-</div>
-
-</body>
-</html>
+@endsection

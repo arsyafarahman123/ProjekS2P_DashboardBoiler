@@ -1,8 +1,8 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<title>RLA Analysis - S2P Boiler Dashboard</title>
+@extends('layouts.dashboard')
+
+@section('title', 'RLA Analysis - S2P Boiler Dashboard')
+
+@push('styles')
 <style>
   :root{
     --bg-deep:#0a1729;
@@ -31,76 +31,10 @@
     color:var(--text-light);
   }
 
-  .layout{ display:flex; min-height:100vh; font-family:'Inter', 'Segoe UI', Arial, Helvetica, sans-serif; }
-
-  /* SIDEBAR */
-  .sidebar{
-    width:72px;
-    min-width:72px;
-    background:linear-gradient(180deg, #0a1729 0%, #0d2038 100%);
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    padding-top:14px;
-    padding-bottom:14px;
-    gap:20px;
-    position:sticky;
-    top:0;
-    align-self:flex-start;
-    height:100vh;
-    overflow-y:auto;
-    overflow-x:hidden;
-    scrollbar-width:thin;
-    scrollbar-color:#2a4a6e transparent;
-  }
-  .sidebar::-webkit-scrollbar{ width:4px; }
-  .sidebar::-webkit-scrollbar-thumb{ background:#2a4a6e; border-radius:4px; }
-    .sidebar .logo-box{
-        width:52px;
-        height:52px;
-        overflow:hidden;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        flex-shrink:0;
-  }
-  .sidebar .logo-box img{ 
-    width:100%; 
-    height:100%;
-    object-fit:contain;
-    display:block; 
-  }
-  .sidebar-nav{
-    display:flex;
-    flex-direction:column;
-    gap:18px;
-    margin-top:8px;
-    align-items:center;
-    padding-bottom:12px;
-  }
-.sidebar-nav .nav-item{
-  writing-mode:vertical-rl;
-  transform:rotate(180deg);
-  font-size:10px;
-  letter-spacing:1.5px;
-  font-weight:600;
-  color:var(--text-faint);
-  position:relative;
-  padding:4px 8px 4px 0;
-  border-right:3px solid transparent;
-}
-.sidebar-nav .nav-item.active{
-  color:#fff;
-  border-right-color:var(--gold);
-}
-
-  /* MAIN */
+  /* RLA-specific: stack this page's sections (title row, filter bar,
+     content grid, bottom row) with a consistent gap. The outer padding
+     and background for .main itself now live in dashboard-shared.css. */
   .main{
-    flex:1;
-    position:relative;
-    min-height:100vh;
-    background:linear-gradient(120deg, #64798f 0%, #586C82 45%, #46586c 100%);
-    padding:22px 26px;
     display:flex;
     flex-direction:column;
     gap:14px;
@@ -340,7 +274,7 @@
     letter-spacing:0.5px;
   }
   .rul-badge.critical{ background:rgba(229,72,77,0.18); color:#ff8a8e; }
-  .rul-badge.warning{ background:rgba(224,194,60,0.18); color:#e8d268; }
+  .rul-badge.watch{ background:rgba(224,194,60,0.18); color:#e8d268; }
   .rul-badge.safe{ background:rgba(63,220,132,0.18); color:#3fdc84; }
 
   /* bottom row */
@@ -410,23 +344,10 @@
     .bottom-row{ grid-template-columns:1fr; }
   }
 </style>
-</head>
-<body>
+@endpush
 
-<div class="layout">
-
-  <div class="sidebar">
-    <div class="logo-box"><img src="{{ asset('images/logo.png') }}" alt="S2P logo"></div>
-    <div class="sidebar-nav">
-      <a href="{{ route('global-view') }}" class="nav-item" style="text-decoration:none;">GLOBAL VIEW</a>
-      <a href="{{ route('tube.mapping') }}" class="nav-item" style="text-decoration:none;">TUBE MAPPING</a>
-      <a href="{{ route('rla-analysis') }}" class="nav-item active" style="text-decoration:none;">RLA ANALYSIS</a>
-      <a href="{{ route('maintenance') }}" class="nav-item" style="text-decoration:none;">MAINTENANCE</a>
-      <a href="{{ route('input-data.index') }}" class="nav-item" style="text-decoration:none;">INPUT DATA</a>
-    </div>
-  </div>
-
-  <div class="main">
+@section('content')
+  <main class="main">
 
     <div class="title-row">
       <div class="title-left">
@@ -564,7 +485,7 @@
           </div>
           <div class="legend-boxes">
             <span><i style="background:#3fdc84"></i>SAFE</span>
-            <span><i style="background:#e0c23c"></i>WARNING</span>
+            <span><i style="background:#e0c23c"></i>WATCH</span>
             <span><i style="background:#ff4d4f"></i>CRITICAL</span>
           </div>
         </div>
@@ -577,17 +498,37 @@
             <span class="tag">RUL-01</span>
           </div>
           <table class="rul-table">
-            <tr><th>TUBE ID</th><th>SECTION</th><th>RUL</th><th>%</th><th>GRADE</th><th>STATUS</th></tr>
-            @foreach($data['rul_table'] as $row)
+            <tr><th>TUBE ID</th><th>SECTION</th><th>RUL</th><th>STATUS</th></tr>
             <tr>
-              <td class="tube-id">{{ $row['tube_id'] }}</td>
-              <td>{{ $row['section'] }}</td>
-              <td>{{ $row['rul_months'] }} mo</td>
-              <td>{{ $row['pct'] }}%</td>
-              <td>{{ $row['grade'] }}</td>
-              <td><span class="rul-badge {{ $row['status'] }}">{{ strtoupper($row['status']) }}</span></td>
+              <td class="tube-id">SH-2-R12-T18</td>
+              <td>Sec. Superheater</td>
+              <td>1 mo</td>
+              <td><span class="rul-badge critical">CRITICAL</span></td>
             </tr>
-            @endforeach
+            <tr>
+              <td class="tube-id">SH-2-R12-T15</td>
+              <td>Sec. Superheater</td>
+              <td>14 mo</td>
+              <td><span class="rul-badge watch">WATCH</span></td>
+            </tr>
+            <tr>
+              <td class="tube-id">SH-1-R09-T22</td>
+              <td>Pri. Superheater</td>
+              <td>37 mo</td>
+              <td><span class="rul-badge watch">WATCH</span></td>
+            </tr>
+            <tr>
+              <td class="tube-id">RH-1-R05-T09</td>
+              <td>Reheater</td>
+              <td>94 mo</td>
+              <td><span class="rul-badge safe">SAFE</span></td>
+            </tr>
+            <tr>
+              <td class="tube-id">EC-3-R02-T04</td>
+              <td>Economizer</td>
+              <td>132 mo</td>
+              <td><span class="rul-badge safe">SAFE</span></td>
+            </tr>
           </table>
         </div>
 
@@ -617,14 +558,13 @@
       </div>
     </div>
 
-    <div class="bottom-row">
+<div class="bottom-row">
       <div class="panel">
         <h2>HISTORICAL NDT</h2>
         <table class="ndt">
           <tr><th>Date</th><th>Tube ID</th><th>Creep %</th></tr>
-          @foreach($data['historical_ndt'] as $ndt)
-          <tr><td>{{ $ndt['date'] }}</td><td class="tube-id">{{ $ndt['tube_id'] }}</td><td class="creep">{{ $ndt['creep'] }}%</td></tr>
-          @endforeach
+          <tr><td>2019-06</td><td class="tube-id">SH-2-R12-T18</td><td class="creep">15.5%</td></tr>
+          <tr><td>2028-10</td><td class="tube-id">SH-2-R12-T18</td><td class="creep">15.5%</td></tr>
         </table>
       </div>
 
@@ -638,10 +578,102 @@
       </div>
     </div>
 
-  </div>
+    {{-- Dokumen RLA Terupload (dari menu Input Data) --}}
+    <div class="panel" style="margin-top:0;">
+      <div class="panel-header">
+        <h2>RLA DOCUMENTS</h2>
+        <span class="tag">RLA-DOCS</span>
+      </div>
 
-</div>
-  <script>
+      @if ($documents->isEmpty())
+        <div style="padding:20px 0; text-align:center; font-size:12px; color:var(--text-faint);">
+          Belum ada dokumen RLA untuk Unit {{ $selectedUnit }} tahun {{ $selectedYear }}.
+        </div>
+      @else
+        {{-- Gambar ditampilkan sebagai thumbnail inline --}}
+        @php $imageDocs = $documents->filter(fn($d) => $d->isImage()); @endphp
+        @if ($imageDocs->isNotEmpty())
+          <div style="display:flex; flex-wrap:wrap; gap:14px; margin-bottom:16px;">
+            @foreach ($imageDocs as $doc)
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:4px; padding:12px; width:360px;">
+                <a href="{{ $doc->fileUrl() }}" target="_blank" title="Klik untuk lihat fullsize">
+                  <img src="{{ $doc->fileUrl() }}" alt="{{ $doc->nama_file }}"
+                       style="width:100%; height:auto; max-height:420px; object-fit:contain; border-radius:3px; display:block;"
+                       loading="lazy">
+                </a>
+                <div style="margin-top:8px; font-size:11px; color:var(--text-dim); line-height:1.5;">
+                  <div style="font-weight:700; color:var(--gold-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ $doc->unit }}">
+                    {{ strtoupper($doc->unit) }}
+                  </div>
+                  <div style="font-weight:600; color:var(--text-light);">{{ $doc->tanggal->format('d M Y') }}</div>
+                  <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ $doc->nama_file }}">
+                    {{ $doc->nama_file }}
+                  </div>
+                  <a href="{{ route('input-data.rla.download', $doc) }}"
+                     style="display:inline-block; margin-top:4px; font-size:9px; font-weight:700; color:var(--cyan); border:1px solid rgba(127,212,232,0.4); border-radius:3px; padding:2px 8px; text-decoration:none;"
+                     onmouseover="this.style.backgroundColor='rgba(127,212,232,0.15)'"
+                     onmouseout="this.style.backgroundColor='transparent'">
+                    DOWNLOAD
+                  </a>
+                </div>
+              </div>
+            @endforeach
+          </div>
+        @endif
+
+        {{-- Tabel untuk file non-gambar --}}
+        @php $nonImageDocs = $documents->filter(fn($d) => !$d->isImage()); @endphp
+        @if ($nonImageDocs->isNotEmpty())
+          <div style="overflow-x:auto; margin-top:4px;">
+            <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
+              <thead>
+                <tr style="text-align:left; color:var(--text-dim); font-size:10.5px; letter-spacing:0.5px;">
+                  <th style="padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.08);">UNIT</th>
+                  <th style="padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.08);">TANGGAL</th>
+                  <th style="padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.08);">NAMA FILE</th>
+                  <th style="padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.08);">DIUPLOAD</th>
+                  <th style="padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.08); text-align:right;">AKSI</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach ($nonImageDocs as $doc)
+                  <tr>
+                    <td style="padding:7px 6px; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--gold-text); font-weight:700;">
+                      {{ strtoupper($doc->unit) }}
+                    </td>
+                    <td style="padding:7px 6px; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">
+                      {{ $doc->tanggal->format('d M Y') }}
+                    </td>
+                    <td style="padding:7px 6px; border-bottom:1px solid rgba(255,255,255,0.05); max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+                        title="{{ $doc->nama_file }}">
+                      {{ $doc->nama_file }}
+                    </td>
+                    <td style="padding:7px 6px; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--text-dim);">
+                      {{ $doc->created_at->format('d M Y H:i') }}
+                    </td>
+                    <td style="padding:7px 6px; border-bottom:1px solid rgba(255,255,255,0.05); text-align:right;">
+                      <a href="{{ route('input-data.rla.download', $doc) }}"
+                         style="display:inline-block; font-size:10px; font-weight:700; color:var(--cyan); border:1px solid rgba(127,212,232,0.4); border-radius:3px; padding:4px 10px; text-decoration:none;"
+                         onmouseover="this.style.backgroundColor='rgba(127,212,232,0.15)'"
+                         onmouseout="this.style.backgroundColor='transparent'">
+                        DOWNLOAD
+                      </a>
+                    </td>
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
+        @endif
+      @endif
+    </div>
+
+  </main>
+
+@endsection
+
+@push('scripts')
+<script>
     (function(){
       const wrap = document.querySelector('.chart-wrap');
       const tooltip = document.getElementById('rlTooltip');
@@ -681,7 +713,5 @@
         });
       });
     })();
-  </script>
-
-</body>
-</html>
+</script>
+@endpush
