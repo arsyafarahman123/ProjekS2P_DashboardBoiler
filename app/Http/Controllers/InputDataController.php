@@ -395,7 +395,7 @@ class InputDataController extends Controller
         $data = $request->validate([
             'unit' => 'required|string|in:' . implode(',', BoilerTube::UNITS),
             'tanggal' => 'required|date',
-            'file_rla' => 'required|file|mimes:pdf,xlsx,xls,csv|max:20480',
+            'file_rla' => 'required|file|mimes:pdf,xlsx,xls,csv,png,jpg,jpeg|max:20480',
         ]);
 
         $file = $request->file('file_rla');
@@ -411,6 +411,15 @@ class InputDataController extends Controller
         return redirect()
             ->route('input-data.rla')
             ->with('status', "Dokumen RLA {$data['unit']} tanggal {$data['tanggal']} berhasil diupload.");
+    }
+
+    public function rlaFile(RlaDocument $document)
+    {
+        if (! Storage::exists($document->path)) {
+            abort(404, 'File tidak ditemukan.');
+        }
+
+        return Storage::response($document->path);
     }
 
     public function rlaDownload(RlaDocument $document)

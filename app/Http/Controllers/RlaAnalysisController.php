@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RlaDocument;
 use Illuminate\Http\Request;
 
 class RlaAnalysisController extends Controller
@@ -41,6 +42,9 @@ class RlaAnalysisController extends Controller
 
         $data = $this->generateDummyData($section, $unit, $year);
 
+        // Dokumen RLA yang relevan dengan unit & tahun terpilih
+        $documents = $this->getRelatedDocuments($unit, $year);
+
         return view('rla-analysis.index', [
             'boilerSections' => $this->boilerSections,
             'units'          => $this->units,
@@ -49,7 +53,28 @@ class RlaAnalysisController extends Controller
             'selectedUnit'    => $unit,
             'selectedYear'    => $year,
             'data'            => $data,
+            'documents'       => $documents,
         ]);
+    }
+
+    /**
+     * Ambil dokumen RLA terkait dari database berdasarkan unit & tahun.
+     * Unit di halaman RLA Analysis ("1&2", "3", "3A") dipetakan ke format
+     * penyimpanan ("Unit 1", "Unit 2", "Unit 3", "Unit 3A").
+     */
+    protected function getRelatedDocuments(string $unit, int $year)
+    {
+        $dbUnits = match ($unit) {
+            '1&2' => ['Unit 1', 'Unit 2'],
+            '3'   => ['Unit 3'],
+            '3A'  => ['Unit 3A'],
+            default => [$unit],
+        };
+
+        return RlaDocument::whereIn('unit', $dbUnits)
+            ->whereYear('tanggal', $year)
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 
     /**

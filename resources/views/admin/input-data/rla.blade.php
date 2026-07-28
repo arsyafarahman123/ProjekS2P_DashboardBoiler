@@ -12,7 +12,7 @@
   <div class="bg-panel rounded-lg p-5 mb-6">
     <div class="text-xs font-bold tracking-wide mb-4">UPLOAD DOKUMEN RLA BARU</div>
     <div class="text-[11px] text-slate-400 mb-4">
-      Upload hasil RLA (Remaining Life Assessment) per unit. Format file yang diterima: PDF, Excel (.xlsx/.xls), CSV. Maksimal 20 MB.
+      Upload hasil RLA (Remaining Life Assessment) per unit. Format file yang diterima: PDF, Excel (.xlsx/.xls), CSV, Gambar (PNG/JPG). Maksimal 20 MB.
     </div>
 
     <form method="POST" action="{{ route('input-data.rla.store') }}" enctype="multipart/form-data"
@@ -38,7 +38,7 @@
       <div>
         <label class="field-label" for="file-rla">FILE DOKUMEN:</label>
         <input id="file-rla" name="file_rla" type="file" required
-               accept=".pdf,.xlsx,.xls,.csv"
+               accept=".pdf,.xlsx,.xls,.csv,.png,.jpg,.jpeg"
                class="field-input" style="min-width:280px;padding:6px 10px;">
       </div>
 

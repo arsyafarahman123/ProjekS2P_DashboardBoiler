@@ -558,6 +558,96 @@
       </div>
     </div>
 
+    {{-- Dokumen RLA Terupload (dari menu Input Data) --}}
+    <div class="panel" style="margin-top:0;">
+      <div class="panel-header">
+        <h2>RLA DOCUMENTS</h2>
+        <span class="tag">RLA-DOCS</span>
+      </div>
+
+      @if ($documents->isEmpty())
+        <div style="padding:20px 0; text-align:center; font-size:12px; color:var(--text-faint);">
+          Belum ada dokumen RLA untuk Unit {{ $selectedUnit }} tahun {{ $selectedYear }}.
+        </div>
+      @else
+        {{-- Gambar ditampilkan sebagai thumbnail inline --}}
+        @php $imageDocs = $documents->filter(fn($d) => $d->isImage()); @endphp
+        @if ($imageDocs->isNotEmpty())
+          <div style="display:flex; flex-wrap:wrap; gap:14px; margin-bottom:16px;">
+            @foreach ($imageDocs as $doc)
+              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:4px; padding:12px; width:360px;">
+                <a href="{{ $doc->fileUrl() }}" target="_blank" title="Klik untuk lihat fullsize">
+                  <img src="{{ $doc->fileUrl() }}" alt="{{ $doc->nama_file }}"
+                       style="width:100%; height:auto; max-height:420px; object-fit:contain; border-radius:3px; display:block;"
+                       loading="lazy">
+                </a>
+                <div style="margin-top:8px; font-size:11px; color:var(--text-dim); line-height:1.5;">
+                  <div style="font-weight:700; color:var(--gold-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ $doc->unit }}">
+                    {{ strtoupper($doc->unit) }}
+                  </div>
+                  <div style="font-weight:600; color:var(--text-light);">{{ $doc->tanggal->format('d M Y') }}</div>
+                  <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ $doc->nama_file }}">
+                    {{ $doc->nama_file }}
+                  </div>
+                  <a href="{{ route('input-data.rla.download', $doc) }}"
+                     style="display:inline-block; margin-top:4px; font-size:9px; font-weight:700; color:var(--cyan); border:1px solid rgba(127,212,232,0.4); border-radius:3px; padding:2px 8px; text-decoration:none;"
+                     onmouseover="this.style.backgroundColor='rgba(127,212,232,0.15)'"
+                     onmouseout="this.style.backgroundColor='transparent'">
+                    DOWNLOAD
+                  </a>
+                </div>
+              </div>
+            @endforeach
+          </div>
+        @endif
+
+        {{-- Tabel untuk file non-gambar --}}
+        @php $nonImageDocs = $documents->filter(fn($d) => !$d->isImage()); @endphp
+        @if ($nonImageDocs->isNotEmpty())
+          <div style="overflow-x:auto; margin-top:4px;">
+            <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
+              <thead>
+                <tr style="text-align:left; color:var(--text-dim); font-size:10.5px; letter-spacing:0.5px;">
+                  <th style="padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.08);">UNIT</th>
+                  <th style="padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.08);">TANGGAL</th>
+                  <th style="padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.08);">NAMA FILE</th>
+                  <th style="padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.08);">DIUPLOAD</th>
+                  <th style="padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.08); text-align:right;">AKSI</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach ($nonImageDocs as $doc)
+                  <tr>
+                    <td style="padding:7px 6px; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--gold-text); font-weight:700;">
+                      {{ strtoupper($doc->unit) }}
+                    </td>
+                    <td style="padding:7px 6px; border-bottom:1px solid rgba(255,255,255,0.05); font-weight:600;">
+                      {{ $doc->tanggal->format('d M Y') }}
+                    </td>
+                    <td style="padding:7px 6px; border-bottom:1px solid rgba(255,255,255,0.05); max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+                        title="{{ $doc->nama_file }}">
+                      {{ $doc->nama_file }}
+                    </td>
+                    <td style="padding:7px 6px; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--text-dim);">
+                      {{ $doc->created_at->format('d M Y H:i') }}
+                    </td>
+                    <td style="padding:7px 6px; border-bottom:1px solid rgba(255,255,255,0.05); text-align:right;">
+                      <a href="{{ route('input-data.rla.download', $doc) }}"
+                         style="display:inline-block; font-size:10px; font-weight:700; color:var(--cyan); border:1px solid rgba(127,212,232,0.4); border-radius:3px; padding:4px 10px; text-decoration:none;"
+                         onmouseover="this.style.backgroundColor='rgba(127,212,232,0.15)'"
+                         onmouseout="this.style.backgroundColor='transparent'">
+                        DOWNLOAD
+                      </a>
+                    </td>
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
+        @endif
+      @endif
+    </div>
+
     <div class="bottom-row">
       <div class="panel">
         <h2>HISTORICAL NDT</h2>

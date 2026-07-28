@@ -97,6 +97,11 @@ Route::middleware('auth')->prefix('input_data')->name('input-data.')->group(func
 
     Route::get('/rla', [InputDataController::class, 'rla'])->name('rla');
     Route::post('/rla', [InputDataController::class, 'rlaStore'])->name('rla.store');
-    Route::get('/rla/download/{document}', [InputDataController::class, 'rlaDownload'])->name('rla.download');
     Route::delete('/rla/{document}', [InputDataController::class, 'rlaDestroy'])->name('rla.destroy');
+});
+
+// RLA file access (public — agar user biasa bisa lihat gambar/dokumen di RLA Analysis)
+Route::prefix('input_data')->name('input-data.')->group(function () {
+    Route::get('/rla/file/{document}', [InputDataController::class, 'rlaFile'])->name('rla.file');
+    Route::get('/rla/download/{document}', [InputDataController::class, 'rlaDownload'])->name('rla.download');
 });
