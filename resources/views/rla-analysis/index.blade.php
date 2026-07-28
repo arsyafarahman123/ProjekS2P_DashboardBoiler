@@ -558,6 +558,26 @@
       </div>
     </div>
 
+<div class="bottom-row">
+      <div class="panel">
+        <h2>HISTORICAL NDT</h2>
+        <table class="ndt">
+          <tr><th>Date</th><th>Tube ID</th><th>Creep %</th></tr>
+          <tr><td>2019-06</td><td class="tube-id">SH-2-R12-T18</td><td class="creep">15.5%</td></tr>
+          <tr><td>2028-10</td><td class="tube-id">SH-2-R12-T18</td><td class="creep">15.5%</td></tr>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h2>SEARCH / FILTER</h2>
+        <div class="search-box">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Filter Tube ID...">
+        </div>
+        <button class="export-btn"><img src="{{ asset('images/download.png') }}" alt="" style="width:16px;height:16px;filter:brightness(0) invert(1);"> EXPORT RLA REPORT (PDF/EXCEL)</button>
+      </div>
+    </div>
+
     {{-- Dokumen RLA Terupload (dari menu Input Data) --}}
     <div class="panel" style="margin-top:0;">
       <div class="panel-header">
@@ -646,26 +666,6 @@
           </div>
         @endif
       @endif
-    </div>
-
-    <div class="bottom-row">
-      <div class="panel">
-        <h2>HISTORICAL NDT</h2>
-        <table class="ndt">
-          <tr><th>Date</th><th>Tube ID</th><th>Creep %</th></tr>
-          <tr><td>2019-06</td><td class="tube-id">SH-2-R12-T18</td><td class="creep">15.5%</td></tr>
-          <tr><td>2028-10</td><td class="tube-id">SH-2-R12-T18</td><td class="creep">15.5%</td></tr>
-        </table>
-      </div>
-
-      <div class="panel">
-        <h2>SEARCH / FILTER</h2>
-        <div class="search-box">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" placeholder="Filter Tube ID...">
-        </div>
-        <button class="export-btn"><img src="{{ asset('images/download.png') }}" alt="" style="width:16px;height:16px;filter:brightness(0) invert(1);"> EXPORT RLA REPORT (PDF/EXCEL)</button>
-      </div>
     </div>
 
   </main>
