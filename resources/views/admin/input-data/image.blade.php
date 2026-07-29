@@ -86,7 +86,7 @@
                 <td class="py-2 pr-3 border-b border-white/5">
                   @php $ext = strtolower(pathinfo($img->nama_file, PATHINFO_EXTENSION)); @endphp
                   @if(in_array($ext, ['jpg','jpeg','png','gif','webp']))
-                    <img src="{{ asset('storage/' . $img->path) }}" alt="Preview" class="h-8 rounded border border-white/10 object-cover" style="max-width:80px;">
+                    <img src="{{ route('input-data.image.file', $img) }}" alt="Preview" class="h-8 rounded border border-white/10 object-cover" style="max-width:80px;">
                   @else
                     <span class="text-[10px] text-slate-500">PDF</span>
                   @endif
@@ -96,7 +96,7 @@
                 </td>
                 <td class="py-2 border-b border-white/5 text-right whitespace-nowrap">
                   <div class="flex items-center justify-end gap-2">
-                    <a href="{{ asset('storage/' . $img->path) }}" target="_blank"
+                    <a href="{{ route('input-data.image.file', $img) }}" target="_blank"
                        class="text-[#7fd4e8] hover:text-white font-semibold text-[10px] border border-[#7fd4e8]/40 rounded px-2.5 py-1 hover:bg-[#7fd4e8]/15">
                       LIHAT
                     </a>
@@ -130,7 +130,7 @@
             <div class="text-[11px] font-bold text-accent mb-2">{{ strtoupper($u) }}</div>
             @php $ext = strtolower(pathinfo($latest->nama_file, PATHINFO_EXTENSION)); @endphp
             @if(in_array($ext, ['jpg','jpeg','png','gif','webp']))
-              <img src="{{ asset('storage/' . $latest->path) }}" alt="{{ $u }}" class="w-full rounded border border-white/5 object-cover" style="max-height:200px;">
+              <img src="{{ route('input-data.image.file', $latest) }}" alt="{{ $u }}" class="w-full rounded border border-white/5 object-cover" style="max-height:200px;">
             @else
               <div class="rounded bg-[#0a1523] flex items-center justify-center text-[10px] text-slate-500" style="height:120px;">
                 PDF Document

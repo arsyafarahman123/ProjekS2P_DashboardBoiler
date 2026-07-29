@@ -567,6 +567,25 @@ class InputDataController extends Controller
             ->with('status', "Gambar boiler {$unit} berhasil diupload.");
     }
 
+    public function imageFile(BoilerImage $image)
+    {
+        $full = storage_path('app/public/' . $image->path);
+        if (! file_exists($full)) {
+            abort(404, 'Gambar tidak ditemukan.');
+        }
+
+        $mime = match (strtolower(pathinfo($image->nama_file, PATHINFO_EXTENSION))) {
+            'pdf'  => 'application/pdf',
+            'png'  => 'image/png',
+            'gif'  => 'image/gif',
+            'webp' => 'image/webp',
+            'jpg', 'jpeg' => 'image/jpeg',
+            default => 'application/octet-stream',
+        };
+
+        return response()->file($full, ['Content-Type' => $mime]);
+    }
+
     public function imageDestroy(Request $request, BoilerImage $image)
     {
         $full = storage_path('app/public/' . $image->path);

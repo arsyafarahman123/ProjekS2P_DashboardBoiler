@@ -107,4 +107,5 @@ Route::middleware('auth')->prefix('input_data')->name('input-data.')->group(func
 Route::prefix('input_data')->name('input-data.')->group(function () {
     Route::get('/rla/file/{document}', [InputDataController::class, 'rlaFile'])->name('rla.file');
     Route::get('/rla/download/{document}', [InputDataController::class, 'rlaDownload'])->name('rla.download');
+    Route::get('/image/file/{image}', [InputDataController::class, 'imageFile'])->name('image.file');
 });

@@ -296,10 +296,10 @@
             @php $latestImg = $boilerImages->first(); $ext = strtolower(pathinfo($latestImg->nama_file, PATHINFO_EXTENSION)); @endphp
             @if($ext === 'pdf')
               <iframe id="boiler-pdf-tm"
-                src="{{ asset('storage/' . $latestImg->path) }}#toolbar=0&navpanes=0&view=Fit"
+                src="{{ route('input-data.image.file', $latestImg) }}#toolbar=0&navpanes=0&view=Fit"
                 title="{{ $latestImg->nama_file }}"></iframe>
             @else
-              <img src="{{ asset('storage/' . $latestImg->path) }}" alt="Boiler 3D {{ strtoupper($unit) }}"
+              <img src="{{ route('input-data.image.file', $latestImg) }}" alt="Boiler 3D {{ strtoupper($unit) }}"
                    class="w-full rounded border border-white/10 object-contain" style="max-height:500px;">
             @endif
             <div class="text-[10px] text-slate-400 mt-2 truncate">{{ $latestImg->nama_file }}</div>
