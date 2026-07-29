@@ -45,8 +45,7 @@
 
     .logo-row { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:26px; text-align:center; }
     .logo-box {
-        width:52px; height:40px; background:#0e2037; border:2px solid #f0f0f0;
-        border-radius:2px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+        width:64px; height:64px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;
     }
     .logo-box img { width:100%; height:100%; object-fit:contain; display:block; }
     .logo-box .logo-text { font-family:'Poppins',sans-serif; font-weight:800; font-size:15px; color:#e0a940; line-height:1; }
