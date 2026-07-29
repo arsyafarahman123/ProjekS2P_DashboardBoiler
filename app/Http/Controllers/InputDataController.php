@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BoilerArea;
+use App\Models\BoilerImage;
 use App\Models\BoilerTube;
 use App\Models\RlaDocument;
 use App\Models\TubeBaseline;
@@ -392,52 +393,191 @@ class InputDataController extends Controller
 
     public function rlaStore(Request $request)
     {
-        $data = $request->validate([
-            'unit' => 'required|string|in:' . implode(',', BoilerTube::UNITS),
-            'tanggal' => 'required|date',
-            'file_rla' => 'required|file|mimes:pdf,xlsx,xls,csv,png,jpg,jpeg|max:20480',
-        ]);
+        $unit = $request->input('unit');
+        if (! $unit || ! in_array($unit, BoilerTube::UNITS)) {
+            return back()->withErrors(['unit' => 'Unit tidak valid.']);
+        }
 
-        $file = $request->file('file_rla');
-        $path = $file->store('rla_documents');
+        $tanggal = $request->input('tanggal');
+        if (! $tanggal || ! strtotime($tanggal)) {
+            return back()->withErrors(['tanggal' => 'Tanggal tidak valid.']);
+        }
+
+        // Bypass $request->hasFile() karena kadang gagal deteksi file
+        // di Windows/local server. Pakai $_FILES langsung lebih reliable.
+        $uploaded = $_FILES['file_rla'] ?? null;
+        if (! $uploaded || empty($uploaded['tmp_name']) || $uploaded['error'] !== UPLOAD_ERR_OK) {
+            $errMsg = 'File harus diupload.';
+            if ($uploaded && $uploaded['error'] === UPLOAD_ERR_INI_SIZE) {
+                $errMsg = 'File terlalu besar (melebihi upload_max_filesize). Maksimal 20MB.';
+            } elseif ($uploaded && $uploaded['error'] === UPLOAD_ERR_FORM_SIZE) {
+                $errMsg = 'File terlalu besar (melebihi MAX_FILE_SIZE form). Maksimal 20MB.';
+            }
+            return back()->withErrors(['file_rla' => $errMsg]);
+        }
+
+        $tmpPath = $uploaded['tmp_name'];
+        $originalName = basename($uploaded['name']);
+        $fileSize = (int) ($uploaded['size'] ?? 0);
+
+        if ($fileSize > 20480 * 1024) {
+            return back()->withErrors(['file_rla' => 'File maksimal 20MB.']);
+        }
+
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $allowed = ['pdf', 'xlsx', 'xls', 'csv', 'png', 'jpg', 'jpeg'];
+
+        if (! in_array($ext, $allowed)) {
+            return back()->withErrors(['file_rla' => 'Format file tidak didukung. Gunakan: ' . implode(', ', $allowed)]);
+        }
+
+        $safeName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
+        $dir = storage_path('app/public/rla_documents');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        $targetPath = $dir . DIRECTORY_SEPARATOR . $safeName;
+
+        copy($tmpPath, $targetPath);
 
         RlaDocument::create([
-            'unit' => $data['unit'],
-            'tanggal' => $data['tanggal'],
-            'nama_file' => $file->getClientOriginalName(),
-            'path' => $path,
+            'unit' => $unit,
+            'tanggal' => $tanggal,
+            'nama_file' => $originalName,
+            'path' => 'rla_documents/' . $safeName,
         ]);
 
         return redirect()
             ->route('input-data.rla')
-            ->with('status', "Dokumen RLA {$data['unit']} tanggal {$data['tanggal']} berhasil diupload.");
+            ->with('status', "Dokumen RLA {$unit} tanggal {$tanggal} berhasil diupload.");
     }
 
     public function rlaFile(RlaDocument $document)
     {
-        if (! Storage::exists($document->path)) {
+        $full = storage_path('app/public/' . $document->path);
+        if (! file_exists($full)) {
             abort(404, 'File tidak ditemukan.');
         }
 
-        return Storage::response($document->path);
+        return response()->file($full);
     }
 
     public function rlaDownload(RlaDocument $document)
     {
-        if (! Storage::exists($document->path)) {
+        $full = storage_path('app/public/' . $document->path);
+        if (! file_exists($full)) {
             abort(404, 'File tidak ditemukan.');
         }
 
-        return Storage::download($document->path, $document->nama_file);
+        return response()->download($full, $document->nama_file);
     }
 
     public function rlaDestroy(RlaDocument $document)
     {
-        Storage::delete($document->path);
+        $full = storage_path('app/public/' . $document->path);
+        if (file_exists($full)) {
+            unlink($full);
+        }
         $document->delete();
 
         return redirect()
             ->route('input-data.rla')
             ->with('status', "Dokumen {$document->nama_file} berhasil dihapus.");
+    }
+
+    // ---------- Upload Gambar Boiler ----------
+
+    public function image(Request $request)
+    {
+        $unit = $request->get('unit', BoilerTube::DEFAULT_UNIT);
+        if (! in_array($unit, BoilerTube::UNITS, true)) {
+            $unit = BoilerTube::DEFAULT_UNIT;
+        }
+
+        $images = BoilerImage::where('unit', $unit)->orderBy('created_at', 'desc')->get();
+
+        $allUnitImages = BoilerImage::orderBy('created_at', 'desc')->get()->groupBy('unit');
+
+        return view('admin.input-data.image', [
+            'units' => BoilerTube::UNITS,
+            'unit' => $unit,
+            'images' => $images,
+            'allUnitImages' => $allUnitImages,
+        ]);
+    }
+
+    public function imageStore(Request $request)
+    {
+        $unit = $request->input('unit');
+        if (! $unit || ! in_array($unit, BoilerTube::UNITS)) {
+            return back()->withErrors(['unit' => 'Unit tidak valid.']);
+        }
+
+        if (! $request->hasFile('file_image')) {
+            // Cek error upload level PHP (melebihi upload_max_filesize, dll)
+            $uploaded = $request->file('file_image');
+            $code = $uploaded ? $uploaded->getError() : 999;
+            $msg = match ($code) {
+                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'File terlalu besar. Maksimal 20MB.',
+                UPLOAD_ERR_NO_FILE => 'Silakan pilih file terlebih dahulu.',
+                default => 'File gagal diupload (kode: ' . $code . ').',
+            };
+
+            return back()->withErrors(['file_image' => $msg]);
+        }
+
+        $file = $request->file('file_image');
+
+        if (! $file->isValid()) {
+            return back()->withErrors(['file_image' => 'File rusak atau gagal diupload.']);
+        }
+
+        $originalName = $file->getClientOriginalName();
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'];
+
+        if (! in_array($ext, $allowed)) {
+            return back()->withErrors(['file_image' => 'Format file tidak didukung. Gunakan: ' . implode(', ', $allowed)]);
+        }
+
+        $size = $file->getSize();
+        if ($size > 20_971_520) {
+            return back()->withErrors(['file_image' => 'File maksimal 20MB.']);
+        }
+
+        $safeName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
+        $dir = storage_path('app/public/boiler_images');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $targetPath = $dir . DIRECTORY_SEPARATOR . $safeName;
+        if (! copy($file->getRealPath(), $targetPath)) {
+            return back()->withErrors(['file_image' => 'Gagal menyimpan file ke server.']);
+        }
+
+        BoilerImage::create([
+            'unit' => $unit,
+            'nama_file' => $originalName,
+            'path' => 'boiler_images/' . $safeName,
+        ]);
+
+        return redirect()
+            ->route('input-data.image', ['unit' => $unit])
+            ->with('status', "Gambar boiler {$unit} berhasil diupload.");
+    }
+
+    public function imageDestroy(Request $request, BoilerImage $image)
+    {
+        $full = storage_path('app/public/' . $image->path);
+        if (file_exists($full)) {
+            unlink($full);
+        }
+        $unit = $image->unit;
+        $image->delete();
+
+        return redirect()
+            ->route('input-data.image', ['unit' => $unit])
+            ->with('status', "Gambar {$image->nama_file} berhasil dihapus.");
     }
 }

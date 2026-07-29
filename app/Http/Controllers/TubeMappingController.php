@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BoilerArea;
+use App\Models\BoilerImage;
 use App\Models\BoilerTube;
 use App\Models\TubeBaseline;
 use App\Models\TubeMeasurement;
@@ -61,16 +62,17 @@ class TubeMappingController extends Controller
             return $m ? [(int) $m[1] => $t->creep_pct] : [];
         });
 
-        // Grid Primary Superheater Unit 3A: jumlah slot & susunan titik ukur
-        // mengikuti pengaturan area (menu admin Input Data).
-        $pshArea = BoilerArea::where('unit', BoilerTube::DEFAULT_UNIT)
-            ->where('name', 'Primary Superheater')
+        // Grid boiler section: jumlah slot & susunan titik ukur mengikuti
+        // section yang sedang dipilih (bukan hardcode Primary Superheater).
+        // Ini bikin grid berubah isinya tiap ganti section di dropdown.
+        $selectedArea = BoilerArea::where('unit', $unit)
+            ->where('name', $section)
             ->first();
-        $pshTotal = $pshArea?->tube_count ?: 200;
-        $pshPointNames = $pshArea?->pointList() ?? TubeMeasurement::POINTS;
-        $pshPoints = TubeMeasurement::query()
-            ->where('unit', BoilerTube::DEFAULT_UNIT)
-            ->where('section', 'Primary Superheater')
+        $tubeCount = $selectedArea?->tube_count ?: 200;
+        $tubePointNames = $selectedArea?->pointList() ?? TubeMeasurement::POINTS;
+        $tubePoints = TubeMeasurement::query()
+            ->where('unit', $unit)
+            ->where('section', $section)
             ->get()
             ->groupBy('tube_number')
             ->map(fn ($rows) => $rows->keyBy('point'));
@@ -82,20 +84,46 @@ class TubeMappingController extends Controller
         $tubeThicknessStats = $this->thicknessStatsForSection($unit, $section);
 
         // Tabel titik ukur A-D per tube (persen ketebalan sisa terhadap
-        // baseline). 100-75% = SAFE, 75-70% = WARNING, <70% = CRITICAL.
+        // baseline). 100-75% = SAFE, <75% = WARNING, <70% = CRITICAL.
         // Satu titik di bawah 70% sudah cukup bikin tube itu CRITICAL,
         // walau titik lain masih tinggi (MIN yang menentukan risiko).
-        $pointsTable = $this->pointsTableForSection($unit, $section);
+        // Parameter $year penting: filter data per tahun supaya ganti
+        // tahun di dropdown menghasilkan warna & status yang berbeda,
+        // tidak statis (sebelumnya ambil semua tahun tanpa filter).
+        $pointsTable = $this->pointsTableForSection($unit, $section, $year);
         $pointNames = TubeMeasurement::POINTS;
 
-        $sectionCode = BoilerTube::SECTION_CODES[$section] ?? strtoupper(substr($section, 0, 3));
+        // Override $statusByTubeNumber & $creepByTubeNumber dari
+        // $pointsTable per-tahun (bukan dari $tubes = BoilerTube seeds)
+        // supaya WARNA GRID + POPUP + TABEL A-D semuanya KONSISTEN.
+        $statusByTubeNumber = collect();
+        $creepByTubeNumber = collect();
+        foreach ($pointsTable as $tubeNumber => $data) {
+            $s = match ($data['status']) {
+                'critical' => 'Critical',
+                'warning' => 'Warning',
+                'safe' => 'Safe',
+                default => null,
+            };
+            if ($s !== null) {
+                $statusByTubeNumber[$tubeNumber] = $s;
+            }
+            $creepByTubeNumber[$tubeNumber] = $data['creep_pct'] ?? null;
+        }
 
-        $total = $tubes->count();
+        // Summary dihitung dari $statusByTubeNumber (data pengukuran
+        // per-tahun), bukan dari $tubes (BoilerTube seeds).
+        $total = $statusByTubeNumber->count();
+        $countSafe = $statusByTubeNumber->filter(fn($s) => $s === 'Safe')->count();
+        $countWatch = $statusByTubeNumber->filter(fn($s) => $s === 'Warning' || $s === 'Watch')->count();
+        $countCritical = $statusByTubeNumber->filter(fn($s) => $s === 'Critical')->count();
         $summary = [
-            'safe_pct' => $total ? round($tubes->where('status', 'Safe')->count() / $total * 100) : 0,
-            'watch_pct' => $total ? round($tubes->where('status', 'Watch')->count() / $total * 100) : 0,
-            'critical_pct' => $total ? round($tubes->where('status', 'Critical')->count() / $total * 100) : 0,
+            'safe_pct' => $total ? round($countSafe / $total * 100) : 0,
+            'watch_pct' => $total ? round($countWatch / $total * 100) : 0,
+            'critical_pct' => $total ? round($countCritical / $total * 100) : 0,
         ];
+
+        $sectionCode = BoilerTube::SECTION_CODES[$section] ?? strtoupper(substr($section, 0, 3));
 
         $topPriority = BoilerTube::query()
             ->where('year', $year)
@@ -130,24 +158,32 @@ class TubeMappingController extends Controller
             ->orderBy('year')
             ->get();
 
+        // Gambar boiler yang diupload admin lewat Input Data > Upload Gambar Boiler
+        $boilerImages = BoilerImage::where('unit', $unit)->orderBy('created_at', 'desc')->get();
+
         return view('tube-mapping.index', compact(
-            'pshPoints', 'pshTotal', 'pshPointNames', 'summary', 'topPriority',
+            'tubePoints', 'tubeCount', 'tubePointNames', 'summary', 'topPriority',
             'historicalNdt', 'creepTrend', 'units', 'sections', 'years',
             'unit', 'section', 'year', 'statusByTubeNumber', 'tubeThicknessStats', 'creepByTubeNumber', 'sectionCode',
-            'pointsTable', 'pointNames'
+            'pointsTable', 'pointNames', 'boilerImages'
         ));
     }
 
     /**
      * Bangun tabel titik ukur A-D (persen ketebalan sisa vs baseline) per
-     * nomor tube untuk section+unit aktif, dari tube_measurements +
+     * nomor tube untuk section+unit+TAHUN aktif, dari tube_measurements +
      * tube_baselines. Dipakai buat tabel "Jenis Pipa per Titik A-D" di
      * bawah grafik creep, dan buat cari status per-titik (warna merah
      * kalau ada 1 titik < 70%).
      *
-     * @return array<int, array{pct: array<string,float|null>, status: string}>
+     * Sebelumnya TANPA filter tahun → ganti tahun dropdown tidak
+     * berpengaruh (data semua tahun di-merge jadi satu).
+     * Sekarang filter per YEAR(measured_at) supaya setiap tahun
+     * menghasilkan grid & tabel berbeda sesuai data asli.
+     *
+     * @return array<int, array{pct: array<string,float|null>, status: string, creep_pct: float|null}>
      */
-    private function pointsTableForSection(string $unit, string $section): array
+    private function pointsTableForSection(string $unit, string $section, int $year): array
     {
         $pointNames = TubeMeasurement::POINTS;
 
@@ -155,11 +191,17 @@ class TubeMappingController extends Controller
             ->where('section', $section)
             ->pluck('initial_thickness_mm', 'tube_number');
 
+        // SQLite tidak support YEAR() — gunakan strftime / LIKE
+        // untuk memfilter berdasarkan tahun dari kolom measured_at.
+        $yearPrefix = "{$year}-";
         $measurements = TubeMeasurement::where('unit', $unit)
             ->where('section', $section)
+            ->where('measured_at', 'LIKE', "{$yearPrefix}%")
             ->get()
             ->groupBy('tube_number');
 
+        // creep per tube = (baseline - min_thickness) / baseline * 100
+        // supaya grid bisa tampil % creep yang sesuai dengan tahun itu
         $table = [];
         foreach ($measurements as $tubeNumber => $rows) {
             $baseline = $baselines[$tubeNumber] ?? null;
@@ -178,7 +220,18 @@ class TubeMappingController extends Controller
                 default => 'safe',
             };
 
-            $table[(int) $tubeNumber] = ['pct' => $pctByPoint, 'status' => $status];
+            // creep: berapa persen ketebalan udah hilang dari baseline
+            $thicknessValues = $rows->pluck('thickness_mm')->filter(fn ($v) => $v !== null);
+            $minThickness = $thicknessValues->isNotEmpty() ? $thicknessValues->min() : null;
+            $creepPct = ($baseline && $minThickness !== null)
+                ? round(($baseline - $minThickness) / $baseline * 100, 2)
+                : null;
+
+            $table[(int) $tubeNumber] = [
+                'pct' => $pctByPoint,
+                'status' => $status,
+                'creep_pct' => $creepPct,
+            ];
         }
 
         return $table;

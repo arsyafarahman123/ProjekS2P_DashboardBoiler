@@ -22,7 +22,6 @@ class BoilerTube extends Model
     const UNITS = ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 3A'];
 
     // Satu-satunya unit yang punya gambar section drawing & data inspeksi.
-    // Unit lain sengaja dibiarkan kosong (tanpa gambar dan tanpa data).
     const DEFAULT_UNIT = 'Unit 3A';
 
     const YEARS = [2021, 2022, 2023, 2024, 2025];
@@ -58,7 +57,7 @@ class BoilerTube extends Model
 
     const STATUS_COLOR = [
         'Safe'     => '#22c55e',
-        'Watch'    => '#eab308',
+        'Warning'  => '#eab308',
         'Critical' => '#ef4444',
     ];
 
@@ -68,7 +67,7 @@ class BoilerTube extends Model
             return 'Critical';
         }
         if ($creep >= 40) {
-            return 'Watch';
+            return 'Warning';
         }
 
         return 'Safe';
@@ -78,7 +77,7 @@ class BoilerTube extends Model
     {
         return match ($status) {
             'Critical' => 'REPLACE IMMEDIATELY',
-            'Watch' => 'REPLACE NEXT SHUTDOWN',
+            'Warning' => 'REPLACE NEXT SHUTDOWN',
             default => 'MONITOR',
         };
     }

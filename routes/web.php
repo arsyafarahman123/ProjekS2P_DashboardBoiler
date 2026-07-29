@@ -34,7 +34,6 @@ Route::get('/api/boiler-data', [DashboardController::class, 'data'])
     ->name('boiler.data');
 
 
-
 // ================================
 // TUBE MAPPING
 // ================================
@@ -77,7 +76,7 @@ Route::delete('/admin/areas/{area}', [AreaController::class, 'destroy'])
     ->middleware('auth');
 
 // Menu Input Data (khusus admin): add/delete pipa, add/delete titik,
-// dan input data pengukuran. Semua diawali memilih unit lalu area.
+// input pengukuran, upload RLA, dan upload gambar boiler.
 Route::middleware('auth')->prefix('input_data')->name('input-data.')->group(function () {
     Route::get('/', [InputDataController::class, 'index'])->name('index');
 
@@ -98,6 +97,10 @@ Route::middleware('auth')->prefix('input_data')->name('input-data.')->group(func
     Route::get('/rla', [InputDataController::class, 'rla'])->name('rla');
     Route::post('/rla', [InputDataController::class, 'rlaStore'])->name('rla.store');
     Route::delete('/rla/{document}', [InputDataController::class, 'rlaDestroy'])->name('rla.destroy');
+
+    Route::get('/image', [InputDataController::class, 'image'])->name('image');
+    Route::post('/image', [InputDataController::class, 'imageStore'])->name('image.store');
+    Route::delete('/image/{image}', [InputDataController::class, 'imageDestroy'])->name('image.destroy');
 });
 
 // RLA file access (public — agar user biasa bisa lihat gambar/dokumen di RLA Analysis)

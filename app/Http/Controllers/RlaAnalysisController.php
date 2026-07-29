@@ -58,23 +58,13 @@ class RlaAnalysisController extends Controller
     }
 
     /**
-     * Ambil dokumen RLA terkait dari database berdasarkan unit & tahun.
-     * Unit di halaman RLA Analysis ("1&2", "3", "3A") dipetakan ke format
-     * penyimpanan ("Unit 1", "Unit 2", "Unit 3", "Unit 3A").
+     * Ambil semua dokumen RLA yang ada (tanpa filter unit/tahun).
+     * Ditampilkan apa adanya supaya user tidak bingung kenapa dokumen
+     * yang sudah diupload tidak muncul.
      */
     protected function getRelatedDocuments(string $unit, int $year)
     {
-        $dbUnits = match ($unit) {
-            '1&2' => ['Unit 1', 'Unit 2'],
-            '3'   => ['Unit 3'],
-            '3A'  => ['Unit 3A'],
-            default => [$unit],
-        };
-
-        return RlaDocument::whereIn('unit', $dbUnits)
-            ->whereYear('tanggal', $year)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        return RlaDocument::orderBy('created_at', 'desc')->get();
     }
 
     /**

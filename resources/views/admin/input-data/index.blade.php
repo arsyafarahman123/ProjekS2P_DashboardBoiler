@@ -48,6 +48,15 @@
       <div class="text-[11px] text-[#8fb4d6] mt-3 font-semibold">BUKA &rarr;</div>
     </a>
 
+    <a href="{{ route('input-data.image') }}"
+       class="bg-panel rounded-lg p-5 block hover:brightness-125 transition">
+      <div class="text-accent text-[15px] font-bold tracking-wide mb-2">UPLOAD GAMBAR BOILER</div>
+      <div class="text-xs text-slate-400 leading-relaxed">
+        Upload gambar struktur 3D boiler per unit (JPG, PNG, PDF). Gambar yang diupload akan muncul di panel BOILER 3D STRUCTURE pada halaman Tube Mapping.
+      </div>
+      <div class="text-[11px] text-[#8fb4d6] mt-3 font-semibold">BUKA &rarr;</div>
+    </a>
+
   </div>
 
 @endsection

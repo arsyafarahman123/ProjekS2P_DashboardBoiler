@@ -59,9 +59,9 @@ class DashboardController extends Controller
         foreach ($areas as $area) {
             $sub = $tubes->where('section', $area->name);
             $critical = $sub->where('status', 'Critical')->count();
-            $watch = $sub->where('status', 'Watch')->count();
+            $watch = $sub->filter(fn($t) => $t->status === 'Watch' || $t->status === 'Warning')->count();
             $safe = $sub->where('status', 'Safe')->count();
-            $worst = $critical ? 'Critical' : ($watch ? 'Watch' : 'Safe');
+            $worst = $critical ? 'Critical' : ($watch ? 'Warning' : 'Safe');
 
             $sectionSummary[] = [
                 'id' => $area->id,
@@ -78,7 +78,7 @@ class DashboardController extends Controller
 
         // ---- Kartu status atas (cards) ----
         $criticalCount = $tubes->where('status', 'Critical')->count();
-        $watchCount = $tubes->where('status', 'Watch')->count();
+        $watchCount = $tubes->filter(fn($t) => $t->status === 'Watch' || $t->status === 'Warning')->count();
         $efficiency = round(100 - ($criticalCount * 0.9 + $watchCount * 0.25), 1);
         $minYear = min(BoilerTube::YEARS);
         $load = round(85 + ($year - $minYear) * 1.5, 1);

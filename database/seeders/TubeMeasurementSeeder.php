@@ -16,17 +16,15 @@ use Illuminate\Support\Facades\DB;
 //    (A, B, C, ... sesuai konfigurasi area) dengan variasi kecil di
 //    sekitar angka itu, sehingga AVG dari titik-titik itu balik ke
 //    angka excel aslinya.
-// 3. Hitung ulang status Safe/Watch/Critical dari titik PALING TIPIS
-//    (MIN), bukan dari rata-rata — karena titik paling tipis yang
-//    paling menentukan risiko sebenarnya.
-// 4. Update boiler_tubes (creep_pct, status) supaya Global View &
-//    grid warna Tube Mapping ikut konsisten.
+// 3. Isi tube_measurements untuk SEMUA tahun (2021–2025), bukan cuma
+//    tahun terakhir — supaya grid Tube Mapping berubah tiap ganti tahun
+//    di dropdown dan warnanya ngikut data dummy pertahun.
 class TubeMeasurementSeeder extends Seeder
 {
-    // Tahun yang dipakai buat isi titik ukur per-pipa (tube_measurements
-    // cuma nyimpen snapshot TERBARU per titik, jadi kita pakai tahun
-    // paling akhir di data biar konsisten sama grid Tube Mapping).
-    private const MEASUREMENT_YEAR = 2025;
+    // Semua tahun yang ada di CSV (2021–2025) akan di-seed sekaligus,
+    // supaya tiap tahun menghasilkan warna grid & tabel titik A-D yang
+    // berbeda-beda (bukan statis cuma data 2025 saja).
+    private const MEASUREMENT_YEARS = [2021, 2022, 2023, 2024, 2025];
 
     public function run(): void
     {
@@ -41,13 +39,12 @@ class TubeMeasurementSeeder extends Seeder
         $handle = fopen($csvPath, 'r');
         $header = fgetcsv($handle); // buang baris header
 
-        $rowsByKey = []; // "unit|section|tube_number" => ['baseline'=>.., 'years'=>[year=>row]]
+        // "unit|section|tube_number" => ['baseline'=>.., 'min_allowable'=>.., 'years'=>[year=>row]]
+        $rowsByKey = [];
 
         while (($row = fgetcsv($handle)) !== false) {
             $data = array_combine($header, $row);
-            // Normalisasi "UNIT 3A" (dari excel) -> "Unit 3A" (dipakai konsisten
-            // di seluruh project, termasuk BoilerTube::DEFAULT_UNIT). Tanpa ini,
-            // data ke-simpan dengan casing beda dan dianggap unit yang lain.
+            // Normalisasi "UNIT 3A" (dari excel) -> "Unit 3A"
             $data['unit'] = BoilerTube::DEFAULT_UNIT;
             $key = $data['unit'].'|'.$data['section'].'|'.$data['tube_number'];
             $rowsByKey[$key]['baseline'] = (float) $data['initial_thickness'];
@@ -64,18 +61,18 @@ class TubeMeasurementSeeder extends Seeder
 
             $baselineRows = [];
             $measurementRows = [];
-            $boilerTubeUpdates = [];
+            $totalMeasurementRows = 0;
 
             foreach ($rowsByKey as $key => $info) {
                 [$unit, $section, $tubeNumber] = explode('|', $key);
                 $tubeNumber = (int) $tubeNumber;
 
-                // Susunan titik ukur ikut konfigurasi area (default A-D,
-                // bisa berubah kalau admin nambah/kurang titik lewat menu Add Area).
+                // Susunan titik ukur ikut konfigurasi area (default A-D)
                 $area = BoilerArea::where('unit', $unit)->where('name', $section)->first();
                 $points = $area?->pointList() ?? TubeMeasurement::POINTS;
+                $pointCount = count($points);
 
-                // 1) Baseline
+                // 1) Baseline (satu per tube, tidak per tahun)
                 $baselineRows[] = [
                     'unit' => $unit,
                     'section' => $section,
@@ -85,11 +82,20 @@ class TubeMeasurementSeeder extends Seeder
                     'updated_at' => now(),
                 ];
 
-                // 2) Titik ukur, digenerate dari nilai tahun MEASUREMENT_YEAR
-                $yearRow = $info['years'][self::MEASUREMENT_YEAR] ?? null;
-                if ($yearRow) {
+                // 2) Titik ukur untuk SETIAP TAHUN yang ada di CSV
+                //    (2021, 2022, 2023, 2024, 2025) — bukan cuma 2025.
+                //    Seed unik per-tahun pakai (tubeNumber + year + point)
+                //    supaya variasi per titik berbeda antar tahun, tidak
+                //    terlihat copas dari tahun ke tahun.
+                foreach (self::MEASUREMENT_YEARS as $year) {
+                    $yearRow = $info['years'][$year] ?? null;
+                    if (! $yearRow) {
+                        continue;
+                    }
+
                     $avgTarget = (float) $yearRow['measured_thickness'];
-                    $values = $this->generatePointValues($avgTarget, count($points), $unit.$section.$tubeNumber);
+                    $seed = "{$unit}{$section}{$tubeNumber}_{$year}";
+                    $values = $this->generatePointValues($avgTarget, $pointCount, $seed);
 
                     foreach ($points as $i => $point) {
                         $measurementRows[] = [
@@ -98,37 +104,20 @@ class TubeMeasurementSeeder extends Seeder
                             'tube_number' => $tubeNumber,
                             'point' => $point,
                             'thickness_mm' => round($values[$i], 2),
-                            'measured_at' => $yearRow['inspected_at'],
+                            'measured_at' => Carbon::parse($yearRow['inspected_at'])->toDateString(),
                             'created_at' => now(),
                             'updated_at' => now(),
                         ];
+                        $totalMeasurementRows++;
                     }
-
-                    $min = min($values);
-                    $baseline = $info['baseline'];
-                    $minAllowable = $info['min_allowable'];
-
-                    $creepPct = $baseline > $minAllowable
-                        ? max(0, min(100, ($baseline - $min) / ($baseline - $minAllowable) * 100))
-                        : 0;
-                    $status = $this->statusFromCreep($creepPct);
-
-                    $boilerTubeUpdates[] = [
-                        'unit' => $unit,
-                        'section' => $section,
-                        'tube_number' => $tubeNumber,
-                        'year' => self::MEASUREMENT_YEAR,
-                        'creep_pct' => round($creepPct, 2),
-                        'status' => $status,
-                    ];
                 }
 
-                // Insert per-batch
+                // Insert per-batch biar query nggak overflow
                 if (count($baselineRows) >= 500) {
                     TubeBaseline::insert($baselineRows);
                     $baselineRows = [];
                 }
-                if (count($measurementRows) >= 500) {
+                if (count($measurementRows) >= 1000) {
                     TubeMeasurement::insert($measurementRows);
                     $measurementRows = [];
                 }
@@ -141,16 +130,10 @@ class TubeMeasurementSeeder extends Seeder
                 TubeMeasurement::insert($measurementRows);
             }
 
-            // Catatan: boiler_tubes (creep_pct/status per tahun) TIDAK lagi
-            // ditimpa di sini. BoilerTubeSeeder sekarang mengisi boiler_tubes
-            // langsung dari kolom Creep Percentage & Status di excel/CSV untuk
-            // semua tahun (2021–2025) dan semua 200 tube/section, supaya grid
-            // Tube Mapping selalu sinkron 1:1 dengan Global View. Titik ukur
-            // (tube_measurements) di sini murni buat detail MIN/MAX/AVG per
-            // titik saat sebuah tube di-klik di grid.
+            $this->command?->info("Total tube_measurements rows: {$totalMeasurementRows}");
         });
 
-        $this->command?->info('Selesai: tube_baselines, tube_measurements, dan boiler_tubes (tahun 2025) sudah di-update dari data excel.');
+        $this->command?->info('Selesai: tube_baselines & tube_measurements (2021–2025) sudah diisi dari data excel.');
     }
 
     // Bikin N nilai di sekitar $avgTarget dengan variasi kecil, tapi
@@ -176,14 +159,5 @@ class TubeMeasurementSeeder extends Seeder
         mt_srand(); // reset seed global
 
         return $values;
-    }
-
-    private function statusFromCreep(float $creepPct): string
-    {
-        return match (true) {
-            $creepPct > 80 => 'Critical',
-            $creepPct >= 40 => 'Watch',
-            default => 'Safe',
-        };
     }
 }

@@ -162,7 +162,7 @@
       <div class="flex items-center gap-[10px]">
         <span class="accent-bar"></span>
         <h1 class="text-[20px] font-bold tracking-[1.5px] text-[#f0b94a] m-0">
-          TUBE MAPPING: {{ strtoupper($unit) }} — {{ strtoupper($section) }}
+          TUBE MAPPING: {{ strtoupper($unit) }} — {{ strtoupper($section) }} &mdash; TAHUN {{ $year }}
         </h1>
       </div>
       <div class="header-logo-box">
@@ -201,22 +201,22 @@
 
       <div class="col-span-2 bg-panel rounded-lg p-4 relative">
         <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-          <div class="text-xs font-bold tracking-wide">PRIMARY SUPERHEATER TUBE MAP — UNIT 3A (TUBE 1&ndash;{{ $pshTotal }})</div>
+           <div class="text-xs font-bold tracking-wide">{{ strtoupper($section) }} TUBE MAP — {{ strtoupper($unit) }} (TUBE 1&ndash;{{ $tubeCount }})</div>
           <div class="flex items-center gap-3 text-[10px] text-slate-400">
             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-safe"></span> SAFE</span>
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-watch"></span> WATCH</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-watch"></span> WARNING</span>
             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-critical"></span> CRITICAL</span>
             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-white/10 border border-white/20"></span> BELUM ADA DATA</span>
           </div>
         </div>
 
         <div class="tube-grid select-none">
-          @for($i=1;$i<=$pshTotal;$i++)
+           @for($i=1;$i<=$tubeCount;$i++)
             @php
               $status = $statusByTubeNumber[$i] ?? null;
               $cellClass = match ($status) {
                   'Safe' => 'bg-safe/25 text-safe border-safe/50 hover:bg-safe/40',
-                  'Watch' => 'bg-watch/25 text-watch border-watch/50 hover:bg-watch/40',
+                  'Watch', 'Warning' => 'bg-watch/25 text-watch border-watch/50 hover:bg-watch/40',
                   'Critical' => 'bg-critical/25 text-critical border-critical/50 hover:bg-critical/40',
                   default => 'bg-white/[0.07] text-slate-500 border-white/10',
               };
@@ -286,13 +286,24 @@
         </div>
       </div>
 
-      <div class="flex flex-col gap-5">
+       <div class="flex flex-col gap-5">
         <div class="bg-panel rounded-lg p-4">
           <div class="flex items-center justify-between mb-3">
             <div class="text-xs font-bold tracking-wide">BOILER 3D STRUCTURE</div>
             <div class="text-[9px] text-slate-500">{{ strtoupper($unit) }}</div>
           </div>
-          @if($unit === \App\Models\BoilerTube::DEFAULT_UNIT)
+          @if(isset($boilerImages) && $boilerImages->isNotEmpty())
+            @php $latestImg = $boilerImages->first(); $ext = strtolower(pathinfo($latestImg->nama_file, PATHINFO_EXTENSION)); @endphp
+            @if($ext === 'pdf')
+              <iframe id="boiler-pdf-tm"
+                src="{{ asset('storage/' . $latestImg->path) }}#toolbar=0&navpanes=0&view=Fit"
+                title="{{ $latestImg->nama_file }}"></iframe>
+            @else
+              <img src="{{ asset('storage/' . $latestImg->path) }}" alt="Boiler 3D {{ strtoupper($unit) }}"
+                   class="w-full rounded border border-white/10 object-contain" style="max-height:500px;">
+            @endif
+            <div class="text-[10px] text-slate-400 mt-2 truncate">{{ $latestImg->nama_file }}</div>
+          @elseif($unit === \App\Models\BoilerTube::DEFAULT_UNIT)
             <iframe id="boiler-pdf-tm"
               src="{{ asset('images/'.rawurlencode('F2092S-J0203-05 R1 SECTION VIEW DRAWING OF BOILER HOUSE.pdf')) }}#toolbar=0&navpanes=0&view=Fit"
               title="Section View Drawing of Boiler House"></iframe>
@@ -313,11 +324,11 @@
 
     <div class="bg-panel rounded-lg p-4 mb-5">
       <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <div class="text-xs font-bold tracking-wide">KETEBALAN PER TITIK (JENIS PIPA A&ndash;D) &mdash; TUBE 1&ndash;{{ $pshTotal }}</div>
+         <div class="text-xs font-bold tracking-wide">KETEBALAN PER TITIK (JENIS PIPA A&ndash;D) &mdash; TUBE 1&ndash;{{ $tubeCount }}</div>
         <div class="flex items-center gap-3 text-[10px] text-slate-400">
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-safe"></span> 100%&ndash;75% AMAN</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-watch"></span> &lt;75%&ndash;70% WARNING</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-critical"></span> &lt;70% CRITICAL</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-watch"></span> <75%&ndash;70% WARNING</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-critical"></span> <70% CRITICAL</span>
         </div>
       </div>
       <div class="overflow-x-auto" style="max-height:420px; overflow-y:auto;">
@@ -332,7 +343,7 @@
             </tr>
           </thead>
           <tbody class="text-slate-200">
-            @for($i=1; $i<=$pshTotal; $i++)
+             @for($i=1; $i<=$tubeCount; $i++)
               @php
                 $row = $pointsTable[$i] ?? null;
                 $rowStatusClass = match ($row['status'] ?? null) {
@@ -366,7 +377,7 @@
         <div class="text-xs font-bold tracking-wide mb-3">LEGENDA STATUS</div>
         <div class="space-y-2 text-xs">
           <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-safe"></span> SAFE ({{ $summary["safe_pct"] }}%)</div>
-          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-watch"></span> WATCH ({{ $summary["watch_pct"] }}%)</div>
+          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-watch"></span> WARNING ({{ $summary["watch_pct"] }}%)</div>
           <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-critical"></span> CRITICAL ({{ $summary["critical_pct"] }}%)</div>
         </div>
       </div>
@@ -390,7 +401,7 @@
                 <td class="py-1.5">{{ $h->creep_pct }}%</td>
                 <td class="py-1.5">{{ $h->scan_date->format("Y-m-d") }}</td>
                 <td class="py-1.5">
-                  <span class="{{ $h->status === "Critical" ? "text-critical" : ($h->status === "Watch" ? "text-watch" : "text-safe") }} font-semibold">
+                  <span class="{{ $h->status === "Critical" ? "text-critical" : (($h->status === "Watch" || $h->status === "Warning") ? "text-watch" : "text-safe") }} font-semibold">
                     {{ strtoupper($h->status) }}
                   </span>
                 </td>
@@ -445,6 +456,7 @@ const CREEP_BY_TUBE = @json($creepByTubeNumber);
 // Kode section aktif (mis. FBS, PSH, SSH) buat bikin Tube ID yang benar
 // sesuai section yang lagi dibuka, bukan selalu "PSH".
 const SECTION_CODE = @json($sectionCode);
+const ACTIVE_UNIT = @json($unit);
 
 function tubeDashboard() {
   return {
@@ -486,12 +498,16 @@ function tubeDashboard() {
       return v == null ? '-' : Number(v).toFixed(2) + ' mm';
     },
     statusText() {
-      return STATUS_BY_TUBE[this.selected?.no] ? String(STATUS_BY_TUBE[this.selected?.no]).toUpperCase() : 'BELUM ADA DATA';
+      const s = STATUS_BY_TUBE[this.selected?.no];
+      if (!s) return 'BELUM ADA DATA';
+      // Tampilkan sebagai WARNING (bukan Watch) untuk konsistensi label
+      if (s === 'Watch' || s === 'Warning') return 'WARNING';
+      return String(s).toUpperCase();
     },
     statusClass() {
       const s = STATUS_BY_TUBE[this.selected?.no];
       if (s === 'Safe') return 'text-safe';
-      if (s === 'Watch') return 'text-watch';
+      if (s === 'Watch' || s === 'Warning') return 'text-watch';
       if (s === 'Critical') return 'text-critical';
       return 'text-slate-500';
     },
@@ -500,7 +516,9 @@ function tubeDashboard() {
       return c == null ? '-' : Number(c).toFixed(2) + '%';
     },
     selectPshTube(no, event) {
-      this.selected = { no, id: SECTION_CODE + '-U3A-' + String(no).padStart(2, '0') };
+      // Tube ID format: KODE-UNIT-TUBENUMBER (e.g. FBS-U3A-01)
+      const unitCode = ACTIVE_UNIT.replace(/\s+/g, '').toUpperCase();
+      this.selected = { no, id: SECTION_CODE + '-' + unitCode + '-' + String(no).padStart(2, '0') };
 
       // Sorot baris data titik A-D punya tube ini di tabel bawah.
       document.querySelectorAll('.point-row-active').forEach(el => el.classList.remove('point-row-active', 'bg-white/10'));
@@ -524,7 +542,6 @@ function tubeDashboard() {
 
       let top = (btnRect.bottom - containerRect.top) + 8;
       if (top + popupHeightEstimate > container.clientHeight) {
-        // kalau ketutup batas bawah container, taruh di atas sel yang diklik
         top = (btnRect.top - containerRect.top) - popupHeightEstimate - 8;
       }
       top = Math.max(8, top);
@@ -536,14 +553,12 @@ function tubeDashboard() {
 
 document.addEventListener("DOMContentLoaded", function () {
   const ctx = document.getElementById("creepChart");
-  const pshTotal = {{ $pshTotal }};
-
-  // Sumbu X = nomor tube 1..{{ $pshTotal }}, sumbu Y = ketebalan (mm),
-  // diambil dari AVG ketebalan 5 tahun tiap tube (TUBE_THICKNESS_STATS,
-  // sudah dihitung server-side dari data dummy asli).
+  if (!ctx) return;
+  
+   const tubeCount = {{ $tubeCount }};
   const labels = [];
   const data = [];
-  for (let i = 1; i <= pshTotal; i++) {
+   for (let i = 1; i <= tubeCount; i++) {
     labels.push(i);
     const stat = TUBE_THICKNESS_STATS[i];
     data.push(stat ? stat.avg : null);
@@ -567,7 +582,7 @@ document.addEventListener("DOMContentLoaded", function () {
       plugins: { legend: { display: false } },
       scales: {
         x: {
-          title: { display: true, text: "NOMOR TUBE (1-" + pshTotal + ")", color: "#94a3b8" },
+           title: { display: true, text: "NOMOR TUBE (1-" + tubeCount + ")", color: "#94a3b8" },
           ticks: { color: "#94a3b8", maxTicksLimit: 10 },
           grid: { color: "rgba(255,255,255,0.05)" },
         },

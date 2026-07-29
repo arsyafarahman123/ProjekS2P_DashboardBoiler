@@ -182,8 +182,8 @@
                             <span style="color:{{ $statusColor['Safe'] }};font-weight:800;font-size:12.5px;letter-spacing:.3px;">SAFE &lt;40%</span>
                         </span>
                         <span style="display:flex;align-items:center;gap:9px;">
-                            <span style="width:14px;height:14px;border-radius:4px;background:{{ $statusColor['Watch'] }};flex-shrink:0;"></span>
-                            <span style="color:{{ $statusColor['Watch'] }};font-weight:800;font-size:12.5px;letter-spacing:.3px;">WATCH 40–80%</span>
+                            <span style="width:14px;height:14px;border-radius:4px;background:{{ $statusColor['Warning'] }};flex-shrink:0;"></span>
+                            <span style="color:{{ $statusColor['Warning'] }};font-weight:800;font-size:12.5px;letter-spacing:.3px;">WARNING 40–80%</span>
                         </span>
                         <span style="display:flex;align-items:center;gap:9px;">
                             <span style="width:14px;height:14px;border-radius:4px;background:{{ $statusColor['Critical'] }};flex-shrink:0;"></span>
@@ -224,8 +224,8 @@ let focusedSection = null;
 
 // ================= Chart 2D (port build_risk_summary_fig & build_comparison_fig) =================
 function buildRiskBar(sectionSummary){
-    const statuses = ['Safe','Watch','Critical'];
-    const textColorMap = { Safe:'#06281a', Watch:'#2b1d00', Critical:'#ffffff' };
+    const statuses = ['Safe','Warning','Critical'];
+    const textColorMap = { Safe:'#06281a', Warning:'#2b1d00', Critical:'#ffffff' };
     const traces = statuses.map(status => {
         const key = status.toLowerCase();
         const y = sectionSummary.map(s => s[key]);
