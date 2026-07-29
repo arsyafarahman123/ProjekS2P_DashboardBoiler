@@ -23,11 +23,11 @@ class RlaDocument extends Model
 
     /**
      * URL untuk menampilkan file (inline view).
-     * Langsung ke storage publik bypass controller finfo.
+     * Menggunakan route permanen rla.file — tidak bergantung symlink storage.
      */
     public function fileUrl(): string
     {
-        return asset('storage/' . $this->path);
+        return route('input-data.rla.file', $this);
     }
 
     /**
@@ -35,6 +35,6 @@ class RlaDocument extends Model
      */
     public function downloadUrl(): string
     {
-        return asset('storage/' . $this->path);
+        return route('input-data.rla.download', $this);
     }
 }
