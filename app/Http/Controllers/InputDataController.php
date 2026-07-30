@@ -459,7 +459,22 @@ class InputDataController extends Controller
             abort(404, 'File tidak ditemukan.');
         }
 
-        return response()->file($full);
+        $ext = strtolower(pathinfo($document->nama_file, PATHINFO_EXTENSION));
+
+        $mime = match ($ext) {
+            'pdf'  => 'application/pdf',
+            'png'  => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'xls'  => 'application/vnd.ms-excel',
+            'csv'  => 'text/csv',
+            default => 'application/octet-stream',
+        };
+
+        return response()->file($full, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . $document->nama_file . '"',
+        ]);
     }
 
     public function rlaDownload(RlaDocument $document)

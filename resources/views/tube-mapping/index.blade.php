@@ -244,7 +244,7 @@
             <span>STATUS:
               <span class="font-bold" :class="statusClass()" x-text="statusText()"></span>
             </span>
-            <span>CREEP: <span class="font-semibold text-white" x-text="creepText()"></span></span>
+            <span>RATA-RATA: <span class="font-semibold text-white" x-text="avgPointPct()"></span></span>
           </div>
 
           <div class="text-[10px] font-bold tracking-wide text-slate-400 mb-1">
@@ -272,15 +272,15 @@
             MIN <span :class="minClass()" class="font-semibold">merah/kuning</span> artinya titik paling tipis udah dekat/lewat batas ini.
           </div>
 
-          <div class="text-[10px] font-bold tracking-wide text-slate-400 mb-1">TITIK PENGUKURAN (DATA ASLI PER TAHUN)</div>
+          <div class="text-[10px] font-bold tracking-wide text-slate-400 mb-1">TITIK PENGUKURAN (KETEBALAN PER TITIK A&ndash;D)</div>
           <div class="space-y-1 text-slate-300">
-            <template x-for="yr in yearList()" :key="yr">
-              <div>TAHUN <span x-text="yr"></span>:
-                <span class="font-semibold text-white" x-text="yearValue(yr)"></span>
+            <template x-for="p in pointList()" :key="p">
+              <div>TITIK <span x-text="p"></span>:
+                <span class="font-semibold text-white" x-text="pointValue(p)"></span>
               </div>
             </template>
-            <div x-show="!hasThicknessStats()" class="text-slate-500 pt-1">
-              Belum ada data dummy untuk tube ini.
+            <div x-show="!hasPointData()" class="text-slate-500 pt-1">
+              Belum ada data titik ukur untuk tube ini.
             </div>
           </div>
         </div>
@@ -450,9 +450,14 @@
 // asli tiap tahun (by_year) — dihitung server-side langsung dari
 // tube_dummy_2021_2025.csv (data dummy Unit 3A), bukan data karangan.
 const TUBE_THICKNESS_STATS = @json($tubeThicknessStats);
+// Data titik ukur A-D per tube (persen ketebalan sisa vs baseline) — dari
+// tube_measurements + tube_baselines per tahun yang sedang difilter.
+const POINTS_TABLE = @json($pointsTable);
 // Status & creep terkini (tahun yang lagi difilter) per nomor tube.
 const STATUS_BY_TUBE = @json($statusByTubeNumber);
 const CREEP_BY_TUBE = @json($creepByTubeNumber);
+// Daftar nama titik (A, B, C, D atau sesuai konfigurasi area)
+const POINT_NAMES = @json($pointNames);
 // Kode section aktif (mis. FBS, PSH, SSH) buat bikin Tube ID yang benar
 // sesuai section yang lagi dibuka, bukan selalu "PSH".
 const SECTION_CODE = @json($sectionCode);
@@ -466,6 +471,17 @@ function tubeDashboard() {
     filterTubeId: '',
     hasThicknessStats() {
       return !!TUBE_THICKNESS_STATS[this.selected?.no];
+    },
+    hasPointData() {
+      return !!POINTS_TABLE[this.selected?.no];
+    },
+    pointList() {
+      return POINT_NAMES;
+    },
+    pointValue(p) {
+      const row = POINTS_TABLE[this.selected?.no];
+      if (!row || row.pct[p] == null) return '—';
+      return Number(row.pct[p]).toFixed(1) + '%';
     },
     thicknessStat(kind) {
       const stats = TUBE_THICKNESS_STATS[this.selected?.no];
@@ -488,15 +504,6 @@ function tubeDashboard() {
       if (pctUsed >= 40) return 'text-watch';
       return 'text-safe';
     },
-    yearList() {
-      const stats = TUBE_THICKNESS_STATS[this.selected?.no];
-      return stats ? Object.keys(stats.by_year).sort() : [];
-    },
-    yearValue(yr) {
-      const stats = TUBE_THICKNESS_STATS[this.selected?.no];
-      const v = stats?.by_year?.[yr];
-      return v == null ? '-' : Number(v).toFixed(2) + ' mm';
-    },
     statusText() {
       const s = STATUS_BY_TUBE[this.selected?.no];
       if (!s) return 'BELUM ADA DATA';
@@ -510,6 +517,14 @@ function tubeDashboard() {
       if (s === 'Watch' || s === 'Warning') return 'text-watch';
       if (s === 'Critical') return 'text-critical';
       return 'text-slate-500';
+    },
+    avgPointPct() {
+      const row = POINTS_TABLE[this.selected?.no];
+      if (!row || !row.pct) return '—';
+      const vals = Object.values(row.pct).filter(v => v != null);
+      if (!vals.length) return '—';
+      const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+      return Number(avg).toFixed(1) + '%';
     },
     creepText() {
       const c = CREEP_BY_TUBE[this.selected?.no];

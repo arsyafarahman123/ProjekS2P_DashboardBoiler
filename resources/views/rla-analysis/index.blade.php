@@ -621,9 +621,51 @@
            </div>
          @endif
 
-         {{-- Tabel untuk file non-gambar --}}
-         @php $nonImageDocs = $documents->filter(fn($d) => !$d->isImage()); @endphp
-         @if ($nonImageDocs->isNotEmpty())
+         {{-- PDF ditampilkan sebagai preview iframe --}}
+         @php $pdfDocs = $documents->filter(fn($d) => $d->isPdf()); @endphp
+         @if ($pdfDocs->isNotEmpty())
+           <div style="display:flex; flex-wrap:wrap; gap:14px; margin-bottom:16px;">
+             @foreach ($pdfDocs as $doc)
+               <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:4px; padding:12px; width:420px;">
+                 <div style="background:#eef2f6; border-radius:3px; overflow:hidden; height:340px;">
+                   <iframe src="{{ $doc->fileUrl() }}#toolbar=0&navpanes=0"
+                           width="100%"
+                           height="100%"
+                           style="border:none; display:block;"
+                           title="{{ $doc->nama_file }}">
+                   </iframe>
+                 </div>
+                 <div style="margin-top:8px; font-size:11px; color:var(--text-dim); line-height:1.5;">
+                   <div style="font-weight:700; color:var(--gold-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ $doc->unit }}">
+                     {{ strtoupper($doc->unit) }}
+                   </div>
+                   <div style="font-weight:600; color:var(--text-light);">{{ $doc->tanggal->format('d M Y') }}</div>
+                   <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ $doc->nama_file }}">
+                     {{ $doc->nama_file }}
+                   </div>
+                   <div style="margin-top:6px; display:flex; gap:8px;">
+                     <a href="{{ $doc->fileUrl() }}" target="_blank"
+                        style="display:inline-block; font-size:9px; font-weight:700; color:var(--gold-text); border:1px solid rgba(224,169,64,0.5); border-radius:3px; padding:3px 10px; text-decoration:none;"
+                        onmouseover="this.style.backgroundColor='rgba(224,169,64,0.15)'"
+                        onmouseout="this.style.backgroundColor='transparent'">
+                       LIHAT FULLSIZE
+                     </a>
+                     <a href="{{ $doc->downloadUrl() }}" download
+                        style="display:inline-block; font-size:9px; font-weight:700; color:var(--cyan); border:1px solid rgba(127,212,232,0.4); border-radius:3px; padding:3px 10px; text-decoration:none;"
+                        onmouseover="this.style.backgroundColor='rgba(127,212,232,0.15)'"
+                        onmouseout="this.style.backgroundColor='transparent'">
+                       DOWNLOAD
+                     </a>
+                   </div>
+                 </div>
+               </div>
+             @endforeach
+           </div>
+         @endif
+
+         {{-- Tabel untuk file non-gambar & non-PDF (Excel, CSV, dll) --}}
+         @php $nonImageNonPdfDocs = $documents->filter(fn($d) => !$d->isImage() && !$d->isPdf()); @endphp
+         @if ($nonImageNonPdfDocs->isNotEmpty())
            <div style="overflow-x:auto; margin-top:4px;">
              <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
                <thead>
@@ -636,7 +678,7 @@
                  </tr>
                </thead>
                <tbody>
-                 @foreach ($nonImageDocs as $doc)
+                 @foreach ($nonImageNonPdfDocs as $doc)
                    <tr>
                      <td style="padding:7px 6px; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--gold-text); font-weight:700;">
                        {{ strtoupper($doc->unit) }}

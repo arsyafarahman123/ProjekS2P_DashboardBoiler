@@ -9,10 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 class TubeMeasurement extends Model
 {
     public const POINTS = ['A', 'B', 'C', 'D'];
-
+    
     protected $fillable = [
-        'unit', 'section', 'tube_number', 'point', 'thickness_mm', 'measured_at',
-    ];
+    'unit', 'section', 'tube_number', 'year', 'point', 'thickness_mm', 'measured_at',
+];
+
 
     protected $casts = [
         'tube_number' => 'integer',

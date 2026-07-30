@@ -22,6 +22,14 @@ class RlaDocument extends Model
     }
 
     /**
+     * Check apakah file ini adalah PDF.
+     */
+    public function isPdf(): bool
+    {
+        return strtolower(pathinfo($this->nama_file, PATHINFO_EXTENSION)) === 'pdf';
+    }
+
+    /**
      * URL untuk menampilkan file (inline view).
      * Menggunakan route permanen rla.file — tidak bergantung symlink storage.
      */

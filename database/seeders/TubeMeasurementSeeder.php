@@ -10,15 +10,6 @@ use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
-// Import data dummy dari file excel (yang sudah di-convert ke CSV) lalu:
-// 1. Isi tube_baselines dari kolom "Wall Thickness Awal"
-// 2. Pecah kolom "Wall Thickness Terukur" (1 angka) jadi N titik ukur
-//    (A, B, C, ... sesuai konfigurasi area) dengan variasi kecil di
-//    sekitar angka itu, sehingga AVG dari titik-titik itu balik ke
-//    angka excel aslinya.
-// 3. Isi tube_measurements untuk SEMUA tahun (2021–2025), bukan cuma
-//    tahun terakhir — supaya grid Tube Mapping berubah tiap ganti tahun
-//    di dropdown dan warnanya ngikut data dummy pertahun.
 class TubeMeasurementSeeder extends Seeder
 {
     // Semua tahun yang ada di CSV (2021–2025) akan di-seed sekaligus,
@@ -102,6 +93,7 @@ class TubeMeasurementSeeder extends Seeder
                             'unit' => $unit,
                             'section' => $section,
                             'tube_number' => $tubeNumber,
+                            'year' => $year,
                             'point' => $point,
                             'thickness_mm' => round($values[$i], 2),
                             'measured_at' => Carbon::parse($yearRow['inspected_at'])->toDateString(),
@@ -136,27 +128,45 @@ class TubeMeasurementSeeder extends Seeder
         $this->command?->info('Selesai: tube_baselines & tube_measurements (2021–2025) sudah diisi dari data excel.');
     }
 
-    // Bikin N nilai di sekitar $avgTarget dengan variasi kecil, tapi
-    // rata-ratanya dipaksa balik persis ke $avgTarget (titik terakhir
-    // dikoreksi supaya AVG match). $seed dipakai biar hasilnya konsisten
-    // tiap kali seeder dijalankan ulang (bukan random murni).
+    /**
+     * Generate realistic NDT measurement points with fire-side erosion bias.
+     *
+     * Dalam boiler, titik yang menghadap api (A, B) selalu lebih cepat
+     * terkikis dibanding titik sisi dingin (C, D). Pola ini menghasilkan
+     * persen ketebalan per titik yang bervariasi, sehingga 1-2 titik bisa
+     * tembus threshold WARNING (<75%) atau CRITICAL (<70%) walau
+     * titik lain masih aman.
+     *
+     * Aturan:
+     *  - Titik A (hottest, fire side)  : avg × 0.80–0.95
+     *  - Titik B (warm side)            : avg × 0.90–1.00
+     *  - Titik C (cool side)            : avg × 0.97–1.06
+     *  - Titik D (coldest) dikoreksi agar rata-rata = avgTarget
+     *
+     * Konsisten antar re-seed karena pakai $seed (crc32).
+     */
     private function generatePointValues(float $avgTarget, int $count, string $seed): array
     {
         mt_srand(crc32($seed));
 
-        $values = [];
-        $spread = 0.15; // variasi maksimum tiap titik, dalam mm
-        for ($i = 0; $i < $count - 1; $i++) {
-            $offset = (mt_rand(-100, 100) / 100) * $spread;
-            $values[] = $avgTarget + $offset;
-        }
+        // Point A: fire side — paling tipis, 80%–95% dari rata-rata
+        $ratioA = 0.80 + (mt_rand(0, 150) / 1000);
+        // Point B: warm side — 90%–100% dari rata-rata
+        $ratioB = 0.90 + (mt_rand(0, 100) / 1000);
+        // Point C: cool side — 97%–106% dari rata-rata (bisa juga lebih tebal dari rata-rata)
+        $ratioC = 0.97 + (mt_rand(0, 90) / 1000);
 
-        // Titik terakhir dikoreksi supaya rata-rata semua titik = avgTarget persis
-        $sumSoFar = array_sum($values);
-        $lastValue = ($avgTarget * $count) - $sumSoFar;
-        $values[] = $lastValue;
+        $values = [
+            round($avgTarget * $ratioA, 2),
+            round($avgTarget * $ratioB, 2),
+            round($avgTarget * $ratioC, 2),
+        ];
 
-        mt_srand(); // reset seed global
+        // Titik D dikoreksi supaya rata-rata 4 titik = avgTarget persis
+        $sum = array_sum($values);
+        $values[] = max(0.10, round(($avgTarget * $count) - $sum, 2));
+
+        mt_srand();
 
         return $values;
     }

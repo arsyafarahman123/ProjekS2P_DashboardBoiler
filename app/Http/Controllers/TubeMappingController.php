@@ -195,10 +195,10 @@ class TubeMappingController extends Controller
         // untuk memfilter berdasarkan tahun dari kolom measured_at.
         $yearPrefix = "{$year}-";
         $measurements = TubeMeasurement::where('unit', $unit)
-            ->where('section', $section)
-            ->where('measured_at', 'LIKE', "{$yearPrefix}%")
-            ->get()
-            ->groupBy('tube_number');
+        ->where('section', $section)
+        ->where('year', $year)
+        ->get()
+        ->groupBy('tube_number');
 
         // creep per tube = (baseline - min_thickness) / baseline * 100
         // supaya grid bisa tampil % creep yang sesuai dengan tahun itu
