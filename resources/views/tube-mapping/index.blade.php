@@ -244,7 +244,7 @@
             <span>STATUS:
               <span class="font-bold" :class="statusClass()" x-text="statusText()"></span>
             </span>
-            <span>RATA-RATA: <span class="font-semibold text-white" x-text="avgPointPct()"></span></span>
+            <span>RATA-RATA: <span class="font-semibold" :class="avgPointPctClass()" x-text="avgPointPctText()"></span></span>
           </div>
 
           <div class="text-[10px] font-bold tracking-wide text-slate-400 mb-1">
@@ -520,12 +520,16 @@ function tubeDashboard() {
     },
     avgPointPct() {
       const row = POINTS_TABLE[this.selected?.no];
-      if (!row || !row.pct) return '—';
+      if (!row || !row.pct) return { text: '—', cls: 'text-slate-500' };
       const vals = Object.values(row.pct).filter(v => v != null);
-      if (!vals.length) return '—';
+      if (!vals.length) return { text: '—', cls: 'text-slate-500' };
       const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-      return Number(avg).toFixed(1) + '%';
+      const text = Number(avg).toFixed(1) + '%';
+      const cls = avg < 70 ? 'text-critical' : (avg < 75 ? 'text-watch' : 'text-safe');
+      return { text, cls };
     },
+    avgPointPctText() { return this.avgPointPct().text; },
+    avgPointPctClass() { return this.avgPointPct().cls; },
     creepText() {
       const c = CREEP_BY_TUBE[this.selected?.no];
       return c == null ? '-' : Number(c).toFixed(2) + '%';
