@@ -53,7 +53,7 @@ class TubeMappingController extends Controller
         $statusByTubeNumber = $tubes->mapWithKeys(function ($t) {
             preg_match('/(\d+)$/', $t->tube_id, $m);
 
-            return $m ? [(int) $m[1] => $t->status] : [];
+            return $m ? [(int) $m[1] => BoilerTube::statusFromCreep($t->creep_pct)] : [];
         });
 
         $creepByTubeNumber = $tubes->mapWithKeys(function ($t) {
@@ -295,13 +295,14 @@ class TubeMappingController extends Controller
     public function show(string $tubeId)
     {
         $tube = BoilerTube::where('tube_id', $tubeId)->orderByDesc('year')->firstOrFail();
+        $status = BoilerTube::statusFromCreep($tube->creep_pct);
 
         return response()->json([
             'tube_id' => $tube->tube_id,
             'creep_pct' => $tube->creep_pct,
             'remaining_life_months' => $tube->remaining_life_months,
-            'status' => $tube->status,
-            'recommended_action' => $tube->recommended_action,
+            'status' => $status,
+            'recommended_action' => BoilerTube::actionFromStatus($status),
             'scan_date' => $tube->scan_date?->format('Y-m-d'),
         ]);
     }

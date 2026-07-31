@@ -33,11 +33,12 @@ class TubeScanSeeder extends Seeder
                         $creep = round(mt_rand(20, 400) / 10, 1);
                         $remainingLife = mt_rand(1, 60);
 
-                        if ($creep > 35 || $remainingLife <= 2) {
+                        // PME threshold: creep>30=Critical, creep>25=Warning, else=Safe
+                        if ($creep > 30) {
                             $status = "Critical";
                             $action = "REPLACE IMMEDIATELY";
-                        } elseif ($creep > 22 || $remainingLife <= 12) {
-                            $status = "Watch";
+                        } elseif ($creep > 25) {
+                            $status = "Warning";
                             $action = "REPLACE NEXT SHUTDOWN";
                         } else {
                             $status = "Safe";

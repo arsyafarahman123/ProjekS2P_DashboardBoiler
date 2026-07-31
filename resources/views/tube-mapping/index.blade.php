@@ -248,7 +248,7 @@
             <span>STATUS:
               <span class="font-bold" :class="statusClass()" x-text="statusText()"></span>
             </span>
-            <span>RATA-RATA: <span class="font-semibold" :class="avgPointPctClass()" x-text="avgPointPctText()"></span></span>
+            <span>NILAI TERENDAH (MIN): <span class="font-semibold" :class="avgPointPctClass()" x-text="avgPointPctText()"></span></span>
           </div>
 
           <div class="text-[10px] font-bold tracking-wide text-slate-400 mb-1">
@@ -523,13 +523,21 @@ function tubeDashboard() {
       return 'text-slate-500';
     },
     avgPointPct() {
+      // PENTING: pakai nilai TERENDAH (MIN) dari titik A-D, BUKAN rata-rata.
+      // STATUS_BY_TUBE (server-side, TubeMappingController::pointsTableForSection)
+      // menentukan status tube dari titik TERLEMAH/MIN, bukan rata-rata semua
+      // titik. Kalau di sini pakai rata-rata, angka % yang tampil bisa
+      // kelihatan "aman" (mis. 82%) padahal STATUS-nya CRITICAL karena ada
+      // satu titik yang jatuh di bawah 70% — itu penyebab status & angka
+      // kelihatan "ga sesuai". Dengan MIN, angka % dan STATUS selalu pakai
+      // basis & threshold yang sama persis: >=75% safe, 70-75% warning, <70% critical.
       const row = POINTS_TABLE[this.selected?.no];
       if (!row || !row.pct) return { text: '—', cls: 'text-slate-500' };
       const vals = Object.values(row.pct).filter(v => v != null);
       if (!vals.length) return { text: '—', cls: 'text-slate-500' };
-      const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-      const text = Number(avg).toFixed(1) + '%';
-      const cls = avg < 70 ? 'text-critical' : (avg < 75 ? 'text-watch' : 'text-safe');
+      const min = Math.min(...vals);
+      const text = Number(min).toFixed(1) + '%';
+      const cls = min < 70 ? 'text-critical' : (min < 75 ? 'text-watch' : 'text-safe');
       return { text, cls };
     },
     avgPointPctText() { return this.avgPointPct().text; },

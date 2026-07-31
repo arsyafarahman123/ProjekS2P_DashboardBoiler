@@ -37,10 +37,10 @@ class BoilerTubeSeeder extends Seeder
         $rows = [];
 
         // Baca langsung dari data dummy excel (tube_dummy_2021_2025.csv):
-        // creep_pct & status per tube per tahun diambil apa adanya dari
-        // sana, bukan angka 0%/Safe buatan — supaya semua tahun (2021–2025)
-        // dan semua 200 tube per section konsisten dengan Global View & data
-        // dummy aslinya.
+        // creep_pct per tube per tahun diambil apa adanya dari sana, tapi
+        // STATUS dihitung ULANG dari creep_pct pakai BoilerTube::statusFromCreep()
+        // (bukan dipakai mentah dari kolom 'status' CSV, karena kolom itu
+        // banyak yang tidak konsisten dengan creep_pct-nya sendiri).
         while (($row = fgetcsv($handle)) !== false) {
             $data = array_combine($header, $row);
 
@@ -48,7 +48,15 @@ class BoilerTubeSeeder extends Seeder
             $tubeNumber = (int) $data['tube_number'];
             $year = (int) $data['year'];
             $creepPct = round((float) $data['creep_pct'], 2);
-            $status = $data['status'];
+            // PENTING: status dihitung ULANG dari creep_pct pakai rumus resmi
+            // aplikasi (BoilerTube::statusFromCreep), BUKAN dipakai mentah dari
+            // kolom 'status' di CSV. Kolom 'status' bawaan CSV ternyata banyak
+            // yang kontradiksi sama creep_pct-nya sendiri (mis. creep 46.9%
+            // ditulis 'Warning', padahal aturan >30% = Critical) — kejadian di
+            // ~47% baris. Kalau dipakai mentah, status yang tampil di Global
+            // View & tabel Historical NDT jadi tidak sinkron dengan angka
+            // creep %-nya sendiri.
+            $status = BoilerTube::statusFromCreep($creepPct);
             $code = $codeMap[$section] ?? strtoupper(substr($section, 0, 3));
             $tubeId = sprintf('%s-U3A-%02d', $code, $tubeNumber);
 

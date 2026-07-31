@@ -55,12 +55,14 @@ class DashboardController extends Controller
         $tubes = BoilerTube::where('unit', $unit)->where('year', $year)->get();
 
         // ---- Status & jumlah per section (section_status / section_counts) ----
+        // Hitung status dari creep_pct (bukan dari kolom status DB)
+        // Threshold PME: creep<=25→Safe, creep>25&<=30→Warning, creep>30→Critical
         $sectionSummary = [];
         foreach ($areas as $area) {
             $sub = $tubes->where('section', $area->name);
-            $critical = $sub->where('status', 'Critical')->count();
-            $watch = $sub->filter(fn($t) => $t->status === 'Watch' || $t->status === 'Warning')->count();
-            $safe = $sub->where('status', 'Safe')->count();
+            $critical = $sub->filter(fn($t) => BoilerTube::statusFromCreep($t->creep_pct) === 'Critical')->count();
+            $watch = $sub->filter(fn($t) => BoilerTube::statusFromCreep($t->creep_pct) === 'Warning')->count();
+            $safe = $sub->filter(fn($t) => BoilerTube::statusFromCreep($t->creep_pct) === 'Safe')->count();
             $worst = $critical ? 'Critical' : ($watch ? 'Warning' : 'Safe');
 
             $sectionSummary[] = [
@@ -77,8 +79,8 @@ class DashboardController extends Controller
         }
 
         // ---- Kartu status atas (cards) ----
-        $criticalCount = $tubes->where('status', 'Critical')->count();
-        $watchCount = $tubes->filter(fn($t) => $t->status === 'Watch' || $t->status === 'Warning')->count();
+        $criticalCount = $tubes->filter(fn($t) => BoilerTube::statusFromCreep($t->creep_pct) === 'Critical')->count();
+        $watchCount = $tubes->filter(fn($t) => BoilerTube::statusFromCreep($t->creep_pct) === 'Warning')->count();
         $efficiency = round(100 - ($criticalCount * 0.9 + $watchCount * 0.25), 1);
         $minYear = min(BoilerTube::YEARS);
         $load = round(85 + ($year - $minYear) * 1.5, 1);
@@ -104,8 +106,8 @@ class DashboardController extends Controller
                 'tube_id' => $r->tube_id,
                 'creep_pct' => $r->creep_pct,
                 'remaining_life_months' => $r->remaining_life_months,
-                'status' => $r->status,
-                'recommended_action' => $r->recommended_action,
+                'status' => BoilerTube::statusFromCreep($r->creep_pct),
+                'recommended_action' => BoilerTube::actionFromStatus(BoilerTube::statusFromCreep($r->creep_pct)),
                 'scan_date' => $r->scan_date->format('Y-m-d'),
             ]);
         }
