@@ -76,7 +76,7 @@
     align-items:center;
     padding-top:14px;
     padding-bottom:14px;
-    gap:20px;
+    gap:32px;
     position:sticky;
     top:0;
     align-self:flex-start;
@@ -100,8 +100,8 @@
   .sidebar-nav{
     display:flex;
     flex-direction:column;
-    gap:18px;
-    margin-top:8px;
+    gap: 26px;
+    margin-top:14px;
     align-items:center;
     padding-bottom:12px;
   }
@@ -113,7 +113,11 @@
     font-weight:600;
     color:#6d7f96;
     position:relative;
-    padding:4px 8px 4px 0;
+    min-height:96px;              /* baris baru, tambahin */
+    display:flex;                 /* baris baru, tambahin */
+    align-items:center;           /* baris baru, tambahin */
+    justify-content:center;       /* baris baru, tambahin */
+    padding:0 8px 0 0;
     background:none;
     border:none;
     border-right:3px solid transparent;
