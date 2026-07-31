@@ -212,13 +212,14 @@ class TubeMappingController extends Controller
             }
 
             $validPct = array_filter($pctByPoint, fn ($v) => $v !== null);
-            // STATUS dihitung dari RATA-RATA persentase titik A-D (bukan MIN),
-            // agar konsisten dengan legenda: ≥75% SAFE, <75%–70% WARNING, <70% CRITICAL.
-            $avgPct = $validPct ? array_sum($validPct) / count($validPct) : null;
+            // STATUS dari TITIK TERLEMAH (MIN), bukan rata-rata.
+            // Satu titik di bawah 70% sudah cukup bikin tube CRITICAL,
+            // walau titik lain masih tinggi. Threshold: ≥75% SAFE, <75%–70% WARNING, <70% CRITICAL.
+            $minPct = $validPct ? min($validPct) : null;
             $status = match (true) {
-                $avgPct === null => 'unknown',
-                $avgPct < 70 => 'critical',
-                $avgPct < 75 => 'warning',
+                $minPct === null => 'unknown',
+                $minPct < 70 => 'critical',
+                $minPct < 75 => 'warning',
                 default => 'safe',
             };
 

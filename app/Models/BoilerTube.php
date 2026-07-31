@@ -63,10 +63,14 @@ class BoilerTube extends Model
 
     public static function statusFromCreep(float $creep): string
     {
-        if ($creep > 80) {
+        // PME standard thresholds (creep = % ketebalan yang hilang):
+        // creep <= 25%  → remaining >= 75%  → AMAN (Safe)
+        // creep 25-30%  → remaining 70-75%  → WARNING (Warning)
+        // creep > 30%   → remaining < 70%   → CRITICAL (Critical)
+        if ($creep > 30) {
             return 'Critical';
         }
-        if ($creep >= 40) {
+        if ($creep > 25) {
             return 'Warning';
         }
 
