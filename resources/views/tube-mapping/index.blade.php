@@ -251,31 +251,6 @@
             <span>NILAI TERENDAH (MIN): <span class="font-semibold" :class="avgPointPctClass()" x-text="avgPointPctText()"></span></span>
           </div>
 
-          <div class="text-[10px] font-bold tracking-wide text-slate-400 mb-1">
-            WALL THICKNESS 5 TAHUN ({{ min(\App\Models\BoilerTube::YEARS) }}&ndash;{{ max(\App\Models\BoilerTube::YEARS) }})
-          </div>
-          <div x-show="!hasThicknessStats()" class="text-slate-500 pb-2">
-            Belum ada data dummy untuk tube ini.
-          </div>
-          <div x-show="hasThicknessStats()" class="grid grid-cols-3 gap-2 pb-2">
-            <div>
-              <div class="text-[10px] text-slate-500">MIN</div>
-              <div class="font-semibold" :class="minClass()" x-text="thicknessStat('min')"></div>
-            </div>
-            <div>
-              <div class="text-[10px] text-slate-500">MAX</div>
-              <div class="font-semibold text-safe" x-text="thicknessStat('max')"></div>
-            </div>
-            <div>
-              <div class="text-[10px] text-slate-500">AVG</div>
-              <div class="font-semibold text-white" x-text="thicknessStat('avg')"></div>
-            </div>
-          </div>
-          <div x-show="hasThicknessStats()" class="text-[10.5px] text-slate-400 pb-3 mb-3 border-b border-white/10">
-            Batas minimum aman (min. allowable): <span class="font-semibold text-white" x-text="minAllowableText()"></span>.
-            MIN <span :class="minClass()" class="font-semibold">merah/kuning</span> artinya titik paling tipis udah dekat/lewat batas ini.
-          </div>
-
           <div class="text-[10px] font-bold tracking-wide text-slate-400 mb-1">TITIK PENGUKURAN (KETEBALAN PER TITIK A&ndash;D)</div>
           <div class="space-y-1 text-slate-300">
             <template x-for="p in pointList()" :key="p">
