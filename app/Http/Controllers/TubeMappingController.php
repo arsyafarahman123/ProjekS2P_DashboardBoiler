@@ -178,7 +178,11 @@ class TubeMappingController extends Controller
             ->get();
 
         // Gambar boiler yang diupload admin lewat Input Data > Upload Gambar Boiler
-        $boilerImages = BoilerImage::where('unit', $unit)->orderBy('created_at', 'desc')->get();
+        // Difilter per section supaya gambar yang tampil sesuai dengan BOILER SECTION yang dipilih
+        $boilerImages = BoilerImage::where('unit', $unit)
+            ->where('section', $section)
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return view('tube-mapping.index', compact(
             'tubePoints', 'tubeCount', 'tubePointNames', 'summary', 'topPriority',

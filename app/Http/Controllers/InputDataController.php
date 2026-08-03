@@ -227,8 +227,9 @@ class InputDataController extends Controller
         ]);
     }
 
-    // Simpan seluruh grid sekaligus. Nilai dikirim sebagai satu paket JSON
-    // (bukan ribuan input form) supaya tidak terpotong batas max_input_vars PHP.
+    // Simpan SATU nilai ukur: pipa # + titik A/B/C/D dipilih dulu di form,
+    // baru nilainya diisi lalu disimpan. Nilai awal (baseline) pipa bersifat
+    // opsional dan hanya perlu diisi sekali per pipa.
     public function ukurStore(Request $request)
     {
         $area = $this->targetArea($request);
@@ -237,60 +238,37 @@ class InputDataController extends Controller
             return back()->withErrors(['section' => 'Area ini belum punya pipa. Tambahkan lewat menu Add/Delete Pipa.']);
         }
 
+        $pointNames = $area->pointList();
+
         $data = $request->validate([
+            'tube_number' => 'required|integer|min:1|max:' . $area->tube_count,
+            'point' => 'required|string|size:1|in:' . implode(',', $pointNames),
+            'nilai' => 'required|numeric|min:0|max:1000',
+            'nilai_awal' => 'nullable|numeric|min:0|max:1000',
             'measured_at' => 'nullable|date',
-            'payload' => 'required|string',
         ]);
 
-        $rowsInput = json_decode($data['payload'], true);
-        if (! is_array($rowsInput) || $rowsInput === []) {
-            return back()->withErrors(['payload' => 'Belum ada nilai yang diisi.']);
-        }
-
-        $pointNames = $area->pointList();
         $measuredAt = $data['measured_at'] ?? now()->toDateString();
-        $savedTubes = 0;
+        $key = [
+            'unit' => $area->unit,
+            'section' => $area->name,
+            'tube_number' => $data['tube_number'],
+        ];
 
-        foreach ($rowsInput as $row) {
-            $no = (int) ($row['tube'] ?? 0);
-            if ($no < 1 || $no > $area->tube_count) {
-                continue;
-            }
-
-            $key = [
-                'unit' => $area->unit,
-                'section' => $area->name,
-                'tube_number' => $no,
-            ];
-            $savedAny = false;
-
-            $initial = $row['initial'] ?? null;
-            if ($this->validThickness($initial)) {
-                TubeBaseline::updateOrCreate($key, [
-                    'initial_thickness_mm' => (float) $initial,
-                ]);
-                $savedAny = true;
-            }
-
-            foreach ($pointNames as $p) {
-                $val = $row['points'][$p] ?? null;
-                if ($this->validThickness($val)) {
-                    TubeMeasurement::updateOrCreate($key + ['point' => $p], [
-                        'thickness_mm' => (float) $val,
-                        'measured_at' => $measuredAt,
-                    ]);
-                    $savedAny = true;
-                }
-            }
-
-            if ($savedAny) {
-                $savedTubes++;
-            }
+        if ($this->validThickness($data['nilai_awal'] ?? null)) {
+            TubeBaseline::updateOrCreate($key, [
+                'initial_thickness_mm' => (float) $data['nilai_awal'],
+            ]);
         }
+
+        TubeMeasurement::updateOrCreate($key + ['point' => $data['point']], [
+            'thickness_mm' => (float) $data['nilai'],
+            'measured_at' => $measuredAt,
+        ]);
 
         return redirect()
-            ->route('input-data.ukur', ['unit' => $area->unit, 'section' => $area->name])
-            ->with('status', "Data {$savedTubes} pipa ({$area->name}) tersimpan. Tanggal ukur: {$measuredAt}.");
+            ->to(route('input-data.ukur', ['unit' => $area->unit, 'section' => $area->name]) . '#pipa-' . $data['tube_number'])
+            ->with('status', "Pipa #{$data['tube_number']} titik {$data['point']} ({$area->name}) tersimpan: {$data['nilai']} mm. Tanggal ukur: {$measuredAt}.");
     }
 
     // Nilai ketebalan valid: angka 0-1000 mm
@@ -316,6 +294,22 @@ class InputDataController extends Controller
         return redirect()
             ->to(route('input-data.ukur', ['unit' => $area->unit, 'section' => $area->name]) . '#pipa-' . $tubeNumber)
             ->with('status', "Data pipa #{$tubeNumber} ({$area->name}) dihapus.");
+    }
+
+    // Hapus satu nilai titik saja (bukan seluruh pipa)
+    public function ukurDestroyPoint(Request $request, int $tubeNumber, string $point)
+    {
+        $area = $this->targetArea($request);
+
+        TubeMeasurement::where('unit', $area->unit)
+            ->where('section', $area->name)
+            ->where('tube_number', $tubeNumber)
+            ->where('point', $point)
+            ->delete();
+
+        return redirect()
+            ->to(route('input-data.ukur', ['unit' => $area->unit, 'section' => $area->name]) . '#pipa-' . $tubeNumber)
+            ->with('status', "Nilai titik {$point} pipa #{$tubeNumber} ({$area->name}) dihapus.");
     }
 
     // ---------- Helper ----------
@@ -509,15 +503,36 @@ class InputDataController extends Controller
             $unit = BoilerTube::DEFAULT_UNIT;
         }
 
-        $images = BoilerImage::where('unit', $unit)->orderBy('created_at', 'desc')->get();
+        // Daftar boiler section untuk unit yang dipilih
+        $sections = BoilerArea::where('unit', $unit)->orderBy('id')->pluck('name')->all();
 
-        $allUnitImages = BoilerImage::orderBy('created_at', 'desc')->get()->groupBy('unit');
+        $section = $request->get('section', '');
+        if (! $section || ! in_array($section, $sections, true)) {
+            $section = $sections[0] ?? '';
+        }
+
+        $images = BoilerImage::where('unit', $unit)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Filter section hanya untuk tampilan, query di atas ambil semua
+        $filteredImages = $section
+            ? $images->where('section', $section)
+            : $images;
+
+        // Ringkasan gambar per section
+        $allSectionImages = $section
+            ? null
+            : $images->groupBy('section');
 
         return view('admin.input-data.image', [
             'units' => BoilerTube::UNITS,
             'unit' => $unit,
-            'images' => $images,
-            'allUnitImages' => $allUnitImages,
+            'sections' => $sections,
+            'section' => $section,
+            'images' => $filteredImages,
+            'allUnitImages' => $images->groupBy('unit'),
+            'allSectionImages' => $allSectionImages,
         ]);
     }
 
@@ -526,6 +541,12 @@ class InputDataController extends Controller
         $unit = $request->input('unit');
         if (! $unit || ! in_array($unit, BoilerTube::UNITS)) {
             return back()->withErrors(['unit' => 'Unit tidak valid.']);
+        }
+
+        $section = $request->input('section');
+        $sections = BoilerArea::where('unit', $unit)->pluck('name')->all();
+        if (! $section || ! in_array($section, $sections, true)) {
+            return back()->withErrors(['section' => 'Boiler section tidak valid.']);
         }
 
         if (! $request->hasFile('file_image')) {
@@ -573,13 +594,14 @@ class InputDataController extends Controller
 
         BoilerImage::create([
             'unit' => $unit,
+            'section' => $section,
             'nama_file' => $originalName,
             'path' => 'boiler_images/' . $safeName,
         ]);
 
         return redirect()
-            ->route('input-data.image', ['unit' => $unit])
-            ->with('status', "Gambar boiler {$unit} berhasil diupload.");
+            ->route('input-data.image', ['unit' => $unit, 'section' => $section])
+            ->with('status', "Gambar boiler {$unit} — {$section} berhasil diupload.");
     }
 
     public function imageFile(BoilerImage $image)
@@ -608,10 +630,11 @@ class InputDataController extends Controller
             unlink($full);
         }
         $unit = $image->unit;
+        $section = $image->section;
         $image->delete();
 
         return redirect()
-            ->route('input-data.image', ['unit' => $unit])
+            ->route('input-data.image', ['unit' => $unit, 'section' => $section])
             ->with('status', "Gambar {$image->nama_file} berhasil dihapus.");
     }
 }
