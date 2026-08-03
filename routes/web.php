@@ -93,6 +93,10 @@ Route::middleware('auth')->prefix('input_data')->name('input-data.')->group(func
     Route::delete('/ukur/{tubeNumber}', [InputDataController::class, 'ukurDestroy'])
         ->name('ukur.destroy')
         ->whereNumber('tubeNumber');
+    Route::delete('/ukur/{tubeNumber}/{point}', [InputDataController::class, 'ukurDestroyPoint'])
+        ->name('ukur.destroy.point')
+        ->whereNumber('tubeNumber')
+        ->whereAlpha('point');
 
     Route::get('/rla', [InputDataController::class, 'rla'])->name('rla');
     Route::post('/rla', [InputDataController::class, 'rlaStore'])->name('rla.store');

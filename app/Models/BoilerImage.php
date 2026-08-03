@@ -8,7 +8,7 @@ class BoilerImage extends Model
 {
     protected $table = 'boiler_images';
 
-    protected $fillable = ['unit', 'nama_file', 'path'];
+    protected $fillable = ['unit', 'section', 'nama_file', 'path'];
 
     public $timestamps = true;
 }
