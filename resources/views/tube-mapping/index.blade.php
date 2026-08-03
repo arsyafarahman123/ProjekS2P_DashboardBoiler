@@ -292,9 +292,16 @@
 
        <div class="flex flex-col gap-5">
         <div class="bg-panel rounded-lg p-4">
-          <div class="flex items-center justify-between mb-3">
-            <div class="text-xs font-bold tracking-wide">BOILER 3D STRUCTURE</div>
-            <div class="text-[9px] text-slate-500">{{ strtoupper($unit) }}</div>
+          <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <div class="text-xs font-bold tracking-wide">BOILER 3D STRUCTURE</div>
+              <div class="text-[9px] text-slate-500">{{ strtoupper($unit) }}</div>
+            </div>
+            <a href="#" class="font-bold text-[10px] px-3 py-2 rounded flex items-center justify-center gap-2 whitespace-nowrap"
+               style="background:linear-gradient(135deg, #c9982f 0%, #8a6520 100%);color:#fff;letter-spacing:0.5px;">
+              <img src="{{ asset('images/download.png') }}" alt="" style="width:14px;height:14px;filter:brightness(0) invert(1);">
+              EXPORT REPORT (PDF/EXCEL)
+            </a>
           </div>
           @if(isset($boilerImages) && $boilerImages->isNotEmpty())
             @php $latestImg = $boilerImages->first(); $ext = strtolower(pathinfo($latestImg->nama_file, PATHINFO_EXTENSION)); @endphp
@@ -327,8 +334,27 @@
     </div>
 
     <div class="bg-panel rounded-lg p-4 mb-5">
-      <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-         <div class="text-xs font-bold tracking-wide">KETEBALAN PER TITIK (JENIS PIPA A&ndash;D) &mdash; TUBE 1&ndash;{{ $tubeCount }}</div>
+      <div class="text-xs font-bold tracking-wide mb-3">RINGKASAN KETEBALAN PIPA &mdash; {{ strtoupper($section) }}</div>
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        <div class="bg-white/[0.03] rounded p-3 text-center">
+          <div class="text-[10px] text-slate-500 mb-1">MIN</div>
+          <div class="text-lg font-bold text-critical">{{ $measurementSummary['min'] !== null ? $measurementSummary['min'].' mm' : '—' }}</div>
+        </div>
+        <div class="bg-white/[0.03] rounded p-3 text-center">
+          <div class="text-[10px] text-slate-500 mb-1">MAX</div>
+          <div class="text-lg font-bold text-safe">{{ $measurementSummary['max'] !== null ? $measurementSummary['max'].' mm' : '—' }}</div>
+        </div>
+        <div class="bg-white/[0.03] rounded p-3 text-center">
+          <div class="text-[10px] text-slate-500 mb-1">AVG</div>
+          <div class="text-lg font-bold text-white">{{ $measurementSummary['avg'] !== null ? $measurementSummary['avg'].' mm' : '—' }}</div>
+        </div>
+      </div>
+      <div class="text-[10.5px] text-slate-400 mb-3">
+        Dihitung dari {{ $measurementSummary['count'] }} nilai titik A&ndash;D yang sudah diinput lewat Input Data Pengukuran.
+      </div>
+
+      <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <div class="text-xs font-bold tracking-wide">TABEL TITIK A&ndash;D PER PIPA &mdash; TUBE 1&ndash;{{ $tubeCount }}</div>
         <div class="flex items-center gap-3 text-[10px] text-slate-400">
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-safe"></span> 100%&ndash;75% AMAN</span>
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-watch"></span> <75%&ndash;70% WARNING</span>
@@ -341,8 +367,11 @@
             <tr class="text-left">
               <th class="font-normal pb-2 pr-3">TUBE #</th>
               @foreach($pointNames as $p)
-                <th class="font-normal pb-2 pr-3">TITIK {{ $p }}</th>
+                <th class="font-normal pb-2 pr-3">TITIK {{ $p }} (MM)</th>
               @endforeach
+              <th class="font-normal pb-2 pr-3">MIN</th>
+              <th class="font-normal pb-2 pr-3">MAX</th>
+              <th class="font-normal pb-2 pr-3">AVG</th>
               <th class="font-normal pb-2">STATUS</th>
             </tr>
           </thead>
@@ -358,16 +387,20 @@
                 };
               @endphp
               <tr id="point-row-{{ $i }}" class="border-t border-white/5 cursor-pointer hover:bg-white/[0.04]"
-                  @click="selectPshTube({{ $i }}, $event); $el.scrollIntoView({block:'nearest'})">
+                  @click="selectPshTube({{ $i }}, $event)">
                 <td class="py-1.5 pr-3 font-semibold">{{ $i }}</td>
                 @foreach($pointNames as $p)
                   @php
                     $pct = $row['pct'][$p] ?? null;
+                    $mm = $row['mm'][$p] ?? null;
                     $cellClass = $pct === null ? 'text-slate-500'
                         : ($pct < 70 ? 'text-critical font-semibold' : ($pct < 75 ? 'text-watch font-semibold' : 'text-safe'));
                   @endphp
-                  <td class="py-1.5 pr-3 {{ $cellClass }}">{{ $pct !== null ? $pct.'%' : '—' }}</td>
+                  <td class="py-1.5 pr-3 {{ $cellClass }}">{{ $mm !== null ? $mm : '—' }}</td>
                 @endforeach
+                <td class="py-1.5 pr-3">{{ $row['min_mm'] ?? '—' }}</td>
+                <td class="py-1.5 pr-3">{{ $row['max_mm'] ?? '—' }}</td>
+                <td class="py-1.5 pr-3">{{ $row['avg_mm'] ?? '—' }}</td>
                 <td class="py-1.5 font-semibold {{ $rowStatusClass }}">{{ strtoupper($row['status'] ?? 'N/A') }}</td>
               </tr>
             @endfor
@@ -376,59 +409,12 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-3 gap-5 mb-5">
-      <div class="bg-panel rounded-lg p-4">
-        <div class="text-xs font-bold tracking-wide mb-3">LEGENDA STATUS</div>
-        <div class="space-y-2 text-xs">
-          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-safe"></span> SAFE ({{ $summary["safe_pct"] }}%)</div>
-          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-watch"></span> WARNING ({{ $summary["watch_pct"] }}%)</div>
-          <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-critical"></span> CRITICAL ({{ $summary["critical_pct"] }}%)</div>
-        </div>
-      </div>
-
-      <div class="col-span-2 bg-panel rounded-lg p-4">
-        <div class="text-xs font-bold tracking-wide mb-3">HISTORICAL NDT {{ strtoupper($unit) }} / {{ strtoupper($section) }}</div>
-        <table class="w-full text-[11px]">
-          <thead class="text-slate-400">
-            <tr class="text-left">
-              <th class="font-normal pb-2">TUBE ID</th>
-              <th class="font-normal pb-2">CREEP %</th>
-              <th class="font-normal pb-2">SCAN DATE</th>
-              <th class="font-normal pb-2">STATUS</th>
-              <th class="font-normal pb-2">REKOMENDASI</th>
-            </tr>
-          </thead>
-          <tbody class="text-slate-200">
-            @foreach($historicalNdt as $h)
-              <tr class="border-t border-white/5">
-                <td class="py-1.5">{{ $h->tube_id }}</td>
-                <td class="py-1.5">{{ $h->creep_pct }}%</td>
-                <td class="py-1.5">{{ $h->scan_date->format("Y-m-d") }}</td>
-                <td class="py-1.5">
-                  <span class="{{ $h->status === "Critical" ? "text-critical" : (($h->status === "Watch" || $h->status === "Warning") ? "text-watch" : "text-safe") }} font-semibold">
-                    {{ strtoupper($h->status) }}
-                  </span>
-                </td>
-                <td class="py-1.5">{{ $h->recommended_action }}</td>
-              </tr>
-            @endforeach
-          </tbody>
-        </table>
-      </div>
-    </div>
-
     <div class="bg-panel rounded-lg p-4 mb-5">
-      <div class="text-xs font-bold tracking-wide mb-3">SEARCH / FILTER</div>
-      <div class="flex flex-wrap gap-3 items-center">
-        <div class="relative flex-1 min-w-[220px]">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" class="absolute left-3 top-1/2 -translate-y-1/2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input x-model="filterTubeId" type="text" placeholder="Filter Tube ID..."
-                 class="w-full bg-[#fffff] border border-white/10 rounded pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-accent">
-        </div>
-        <a href="#" class="font-bold text-xs px-4 py-2.5 rounded flex items-center justify-center gap-2 whitespace-nowrap" style="background:linear-gradient(135deg, #c9982f 0%, #8a6520 100%);color:#fff;letter-spacing:0.5px;">
-          <img src="{{ asset('images/download.png') }}" alt="" style="width:16px;height:16px;filter:brightness(0) invert(1);">
-          EXPORT REPORT (PDF/EXCEL)
-        </a>
+      <div class="text-xs font-bold tracking-wide mb-3">LEGENDA STATUS</div>
+      <div class="flex flex-wrap gap-5 text-xs">
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-safe"></span> SAFE ({{ $summary["safe_pct"] }}%)</div>
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-watch"></span> WARNING ({{ $summary["watch_pct"] }}%)</div>
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-critical"></span> CRITICAL ({{ $summary["critical_pct"] }}%)</div>
       </div>
     </div>
 
@@ -472,7 +458,6 @@ function tubeDashboard() {
     selected: null,
     popupStyle: '',
     toast: null,
-    filterTubeId: '',
     hasThicknessStats() {
       return !!TUBE_THICKNESS_STATS[this.selected?.no];
     },
@@ -551,12 +536,11 @@ function tubeDashboard() {
       const unitCode = ACTIVE_UNIT.replace(/\s+/g, '').toUpperCase();
       this.selected = { no, id: SECTION_CODE + '-' + unitCode + '-' + String(no).padStart(2, '0') };
 
-      // Sorot baris data titik A-D punya tube ini di tabel bawah.
-      document.querySelectorAll('.point-row-active').forEach(el => el.classList.remove('point-row-active', 'bg-white/10'));
+      // Sorot baris data titik A-D punya tube ini di tabel bawah (tanpa auto-scroll halaman).
+      document.querySelectorAll('.point-row-active').forEach(el => el.classList.remove('point-row-active', 'bg-yellow-400/20', 'ring-1', 'ring-yellow-400/60'));
       const row = document.getElementById('point-row-' + no);
       if (row) {
-        row.classList.add('point-row-active', 'bg-white/10');
-        row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        row.classList.add('point-row-active', 'bg-yellow-400/20', 'ring-1', 'ring-yellow-400/60');
       }
 
       const btn = event.currentTarget;

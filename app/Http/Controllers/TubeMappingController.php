@@ -93,6 +93,25 @@ class TubeMappingController extends Controller
         $pointsTable = $this->pointsTableForSection($unit, $section, $year);
         $pointNames = TubeMeasurement::POINTS;
 
+        // Ringkasan MIN/MAX/AVG ketebalan (mm) se-section, dihitung dari
+        // seluruh titik A-D milik semua pipa yang sudah punya data
+        // pengukuran (bukan dari CSV dummy) — dipakai di card ringkasan
+        // atas tabel titik A-D pada Tube Mapping.
+        $allMm = [];
+        foreach ($pointsTable as $row) {
+            foreach (($row['mm'] ?? []) as $v) {
+                if ($v !== null) {
+                    $allMm[] = $v;
+                }
+            }
+        }
+        $measurementSummary = [
+            'min' => $allMm ? round(min($allMm), 2) : null,
+            'max' => $allMm ? round(max($allMm), 2) : null,
+            'avg' => $allMm ? round(array_sum($allMm) / count($allMm), 2) : null,
+            'count' => count($allMm),
+        ];
+
         // Override $statusByTubeNumber & $creepByTubeNumber dari
         // $pointsTable per-tahun (bukan dari $tubes = BoilerTube seeds)
         // supaya WARNA GRID + POPUP + TABEL A-D semuanya KONSISTEN.
@@ -165,7 +184,7 @@ class TubeMappingController extends Controller
             'tubePoints', 'tubeCount', 'tubePointNames', 'summary', 'topPriority',
             'historicalNdt', 'creepTrend', 'units', 'sections', 'years',
             'unit', 'section', 'year', 'statusByTubeNumber', 'tubeThicknessStats', 'creepByTubeNumber', 'sectionCode',
-            'pointsTable', 'pointNames', 'boilerImages'
+            'pointsTable', 'pointNames', 'boilerImages', 'measurementSummary'
         ));
     }
 
@@ -206,9 +225,11 @@ class TubeMappingController extends Controller
         foreach ($measurements as $tubeNumber => $rows) {
             $baseline = $baselines[$tubeNumber] ?? null;
             $pctByPoint = [];
+            $mmByPoint = [];
             foreach ($pointNames as $p) {
                 $row = $rows->firstWhere('point', $p);
                 $pctByPoint[$p] = ($row && $baseline) ? round($row->thickness_mm / $baseline * 100, 1) : null;
+                $mmByPoint[$p] = $row ? round($row->thickness_mm, 2) : null;
             }
 
             $validPct = array_filter($pctByPoint, fn ($v) => $v !== null);
@@ -230,8 +251,20 @@ class TubeMappingController extends Controller
                 ? round(($baseline - $minThickness) / $baseline * 100, 2)
                 : null;
 
+            // MIN/MAX/AVG ketebalan (mm) dari titik A-D pipa ini SENDIRI —
+            // langsung dari data yang diinput lewat Input Data Pengukuran,
+            // bukan dari CSV dummy 5 tahun (itu dipakai buat popup/creep chart terpisah).
+            $mmValues = array_values(array_filter($mmByPoint, fn ($v) => $v !== null));
+            $minMm = $mmValues ? min($mmValues) : null;
+            $maxMm = $mmValues ? max($mmValues) : null;
+            $avgMm = $mmValues ? round(array_sum($mmValues) / count($mmValues), 2) : null;
+
             $table[(int) $tubeNumber] = [
                 'pct' => $pctByPoint,
+                'mm' => $mmByPoint,
+                'min_mm' => $minMm,
+                'max_mm' => $maxMm,
+                'avg_mm' => $avgMm,
                 'status' => $status,
                 'creep_pct' => $creepPct,
             ];
