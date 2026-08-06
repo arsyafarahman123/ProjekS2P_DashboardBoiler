@@ -19,9 +19,7 @@ class BoilerAreaSeeder extends Seeder
                 'unit' => BoilerTube::DEFAULT_UNIT,
                 'name' => $name,
                 'code' => $code,
-                // Baru Primary Superheater yang jumlah pipanya disepakati (1-200);
-                // area lain 0 = belum ditentukan, bisa diisi admin di halaman input data
-                'tube_count' => $name === 'Primary Superheater' ? 200 : 0,
+                'tube_count' => 200,
             ]);
         }
     }

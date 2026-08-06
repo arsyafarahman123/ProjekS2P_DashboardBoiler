@@ -89,6 +89,9 @@ Route::middleware('auth')->prefix('input_data')->name('input-data.')->group(func
     Route::delete('/titik', [InputDataController::class, 'titikDelete'])->name('titik.delete');
 
     Route::get('/ukur', [InputDataController::class, 'ukur'])->name('ukur');
+    Route::get('/ukur/tube/{tubeNumber}/data', [InputDataController::class, 'ukurTubeData'])
+        ->name('ukur.tube-data')
+        ->whereNumber('tubeNumber');
     Route::post('/ukur', [InputDataController::class, 'ukurStore'])->name('ukur.store');
     Route::delete('/ukur/{tubeNumber}', [InputDataController::class, 'ukurDestroy'])
         ->name('ukur.destroy')

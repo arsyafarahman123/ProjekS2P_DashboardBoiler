@@ -16,7 +16,7 @@
     <div class="bg-panel rounded-lg p-6 text-center text-xs text-slate-400">
       Unit ini belum punya area. Tambahkan area lewat tombol <span class="text-accent font-bold">ADD AREA</span> di Global View dulu.
     </div>
-  @elseif ($area->tube_count < 1)
+  @elseif ($tubeCount < 1)
     <div class="bg-panel rounded-lg p-6 text-center text-xs text-slate-400">
       Area <span class="text-white font-bold">{{ $area->name }}</span> belum punya pipa.
       Tambahkan dulu lewat menu
@@ -24,18 +24,19 @@
     </div>
   @else
 
-    {{-- Form input satu-per-satu: pilih pipa # + titik dulu, baru isi nilainya --}}
+    {{-- Form input satu-per-satu: pilih pipa #, isi NILAI TITIK dan/atau NILAI UKUR --}}
     <div class="bg-panel rounded-lg p-5 mb-5">
       <div class="text-xs font-bold tracking-wide mb-1">
-        INPUT NILAI &mdash; {{ strtoupper($area->name) }} ({{ $filledCount }} DARI {{ $area->tube_count }} PIPA TERISI)
+        INPUT NILAI &mdash; {{ strtoupper($area->name) }} ({{ $filledCount }} DARI {{ $tubeCount }} PIPA TERISI)
       </div>
       <div class="text-[11px] text-slate-400 mb-4">
-        Pilih dulu nomor pipa dan titik ukur (A/B/C/D), baru isi nilainya. Satu form = satu titik.
-        Titik ukur area ini: <span class="text-slate-200 font-semibold">{{ implode(', ', $points) }}</span>
-        (atur lewat <a href="{{ route('input-data.titik', ['unit' => $unit, 'section' => $area->name]) }}" class="text-accent hover:underline font-semibold">Add/Delete Titik</a>).
+        Pilih pipa, lalu isi <span class="text-slate-200 font-semibold">NILAI TITIK</span> (per titik A/B/C/D)
+        dan/atau <span class="text-slate-200 font-semibold">NILAI UKUR</span> (nilai umum per pipa).
+        Boleh isi sebagian saja &mdash; satu kali Simpan Data per pengisian.
+        Atur titik ukur lewat <a href="{{ route('input-data.titik', ['unit' => $unit, 'section' => $area->name]) }}" class="text-accent hover:underline font-semibold">Add/Delete Titik</a>.
       </div>
 
-      <form method="POST" action="{{ route('input-data.ukur.store') }}" class="grid sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+      <form method="POST" action="{{ route('input-data.ukur.store') }}" class="grid sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end" id="form-ukur">
         @csrf
         <input type="hidden" name="unit" value="{{ $unit }}">
         <input type="hidden" name="section" value="{{ $area->name }}">
@@ -44,7 +45,7 @@
           <label class="field-label" for="tube_number">1. PILIH PIPA #</label>
           <select class="field-input" id="tube_number" name="tube_number" required>
             <option value="">&mdash; pilih &mdash;</option>
-            @for ($i = 1; $i <= $area->tube_count; $i++)
+            @for ($i = 1; $i <= $tubeCount; $i++)
               <option value="{{ $i }}" @selected(old('tube_number') == $i)>
                 #{{ $i }}@if ($rows[$i] ?? null) &nbsp;(sudah ada data)@endif
               </option>
@@ -52,32 +53,27 @@
           </select>
         </div>
 
+        {{-- NILAI TITIK untuk SEMUA titik sekaligus (A/B/C/D) --}}
+        @foreach ($points as $p)
+          <div>
+            <label class="field-label" for="nilai_{{ $p }}">2.{{ $loop->iteration }}. NILAI TITIK {{ $p }} (MM)</label>
+            <input class="field-input" id="nilai_{{ $p }}" name="nilai_{{ $p }}" type="number" step="0.01" min="0" max="1000"
+                   placeholder="titik {{ $p }}" value="{{ old('nilai_' . $p) }}"
+                   data-old-value="{{ old('nilai_' . $p) }}">
+          </div>
+        @endforeach
+
         <div>
-          <label class="field-label" for="point">2. PILIH TITIK</label>
-          <select class="field-input" id="point" name="point" required>
-            <option value="">&mdash; pilih &mdash;</option>
-            @foreach ($points as $p)
-              <option value="{{ $p }}" @selected(old('point') === $p)>TITIK {{ $p }}</option>
-            @endforeach
-          </select>
+          <label class="field-label" for="measured_mm">3. NILAI UKUR (MM)</label>
+          <input class="field-input" id="measured_mm" name="measured_mm" type="number" step="0.01" min="0" max="1000"
+                 placeholder="nilai independen per pipa" value="{{ old('measured_mm') }}"
+                 data-old-value="{{ old('measured_mm') }}">
         </div>
 
         <div>
-          <label class="field-label" for="nilai">3. NILAI UKUR (MM)</label>
-          <input class="field-input" id="nilai" name="nilai" type="number" step="0.01" min="0" max="1000"
-                 required placeholder="mis. 6.35" value="{{ old('nilai') }}">
-        </div>
-
-        <div>
-          <label class="field-label" for="nilai_awal">NILAI AWAL (MM) — OPSIONAL</label>
+          <label class="field-label" for="nilai_awal">4. NILAI AWAL (MM)</label>
           <input class="field-input" id="nilai_awal" name="nilai_awal" type="number" step="0.01" min="0" max="1000"
-                 placeholder="isi sekali per pipa" value="{{ old('nilai_awal') }}">
-        </div>
-
-        <div>
-          <label class="field-label" for="measured_at">TANGGAL UKUR</label>
-          <input class="field-input" id="measured_at" name="measured_at" type="date"
-                 value="{{ old('measured_at', $measuredAtDefault) }}">
+                 placeholder="otomatis terisi dari database" value="{{ old('nilai_awal') }}">
         </div>
 
         <div>
@@ -90,7 +86,11 @@
     <div class="bg-panel rounded-lg p-4">
       <div class="flex items-center justify-between mb-3 flex-wrap gap-3">
         <div class="text-xs font-bold tracking-wide">REKAP DATA TERSIMPAN &mdash; {{ strtoupper($area->name) }}</div>
-        <a href="{{ route('tube.mapping') }}" class="text-[11px] text-[#8fb4d6] hover:text-accent">Lihat di Tube Mapping &rarr;</a>
+        <div class="flex items-center gap-3">
+          <span class="text-[10px] text-slate-500">Tahun aktif: <span class="text-slate-200 font-bold">{{ $activeYear }}</span></span>
+          <a href="{{ route('tube.mapping', ['unit' => $unit, 'section' => $area->name, 'year' => $activeYear]) }}"
+             class="text-[11px] text-[#8fb4d6] hover:text-accent">Lihat di Tube Mapping &rarr;</a>
+        </div>
       </div>
 
       <div id="grid-ukur" class="overflow-x-auto overflow-y-auto" style="max-height:55vh;">
@@ -99,6 +99,7 @@
             <tr class="text-left">
               <th class="font-normal py-2 pr-2 sticky top-0 bg-[#101f3a] z-10">PIPA #</th>
               <th class="font-normal py-2 pr-2 sticky top-0 bg-[#101f3a] z-10">NILAI AWAL (MM)</th>
+              <th class="font-normal py-2 pr-2 sticky top-0 bg-[#101f3a] z-10">NILAI UKUR (MM)</th>
               @foreach ($points as $p)
                 <th class="font-normal py-2 pr-2 sticky top-0 bg-[#101f3a] z-10">TITIK {{ $p }} (MM)</th>
               @endforeach
@@ -106,7 +107,7 @@
             </tr>
           </thead>
           <tbody class="text-slate-200">
-            @for ($i = 1; $i <= $area->tube_count; $i++)
+            @for ($i = 1; $i <= $tubeCount; $i++)
               @php $r = $rows[$i] ?? null; @endphp
               <tr id="pipa-{{ $i }}" class="{{ $r ? 'bg-white/[0.03]' : '' }}">
                 <td class="py-1.5 pr-2 font-bold text-accent whitespace-nowrap border-t border-white/5">
@@ -114,6 +115,13 @@
                   @if ($r)<span class="text-safe text-[9px] font-semibold ml-1" title="sudah ada data">&#9679;</span>@endif
                 </td>
                 <td class="py-1.5 pr-2 border-t border-white/5">{{ $r['initial'] ?? '—' }}</td>
+                <td class="py-1.5 pr-2 border-t border-white/5">
+                  @if (! empty($r['measured_mm']))
+                    <span class="font-bold text-accent">{{ $r['measured_mm'] }}</span>
+                  @else
+                    <span class="text-slate-600">—</span>
+                  @endif
+                </td>
                 @foreach ($points as $p)
                   <td class="py-1.5 pr-2 border-t border-white/5">
                     @if (isset($r['points'][$p]))
@@ -150,6 +158,202 @@
       </div>
     </div>
 
+    {{-- Pengaturan tanggal ukur untuk sesi input (berlaku untuk semua submit) --}}
+    <div class="bg-panel rounded-lg p-4 mt-5">
+      <div class="text-xs font-bold tracking-wide mb-1">TANGGAL UKUR (SESI INPUT)</div>
+      <div class="text-[10px] text-slate-500 mb-3">
+        Isi sekali di awal sesi &mdash; tanggal ini otomatis dipakai untuk semua data yang disimpan, tanpa perlu isi ulang per titik.
+      </div>
+      <div class="flex flex-wrap items-end gap-4">
+        <div class="flex-1 min-w-[220px]">
+          <input class="field-input" id="session_date" type="date" value="{{ old('measured_at', $measuredAtDefault) }}">
+        </div>
+        <div class="flex items-center gap-2 pb-0.5">
+          <button type="button" id="btn_set_date_today"
+                  class="text-[11px] font-semibold px-4 py-2.5 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-slate-200">
+            Terapkan Tanggal untuk Semua Data Hari Ini
+          </button>
+        </div>
+      </div>
+      <div id="session_date_status" class="text-[11px] text-safe font-semibold mt-2 hidden">
+        &#10003; Tanggal ukur diset ke <span id="session_date_value"></span> &mdash; berlaku untuk semua data yang akan disimpan di sesi ini.
+      </div>
+    </div>
+
   @endif
 
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+  'use strict';
+
+  // ============================================
+  // 1. AUTO-FILL:
+  //    - Pilih pipa -> isi NILAI AWAL, NILAI UKUR, dan SEMUA field
+  //      NILAI TITIK (A/B/C/D) sekaligus dari database (AJAX).
+  //    - NILAI UKUR tetap menampilkan nilai independen dari tabel
+  //      (measured_mm) — angka di form selalu sama dengan tabel.
+  // ============================================
+  var tubeSelect = document.getElementById('tube_number');
+  var initialInput = document.getElementById('nilai_awal');
+  var measuredInput = document.getElementById('measured_mm');
+  var unit = '{{ $unit }}';
+  var section = '{{ $area?->name ?? '' }}';
+  var tubeDataUrl = '{{ $area ? route('input-data.ukur.tube-data', ['tubeNumber' => '__TUBE__']) : '' }}';
+
+  // Daftar nama titik area ini (A/B/C/D) — dipakai untuk mengisi field
+  // nilai_A, nilai_B, dst.
+  var pointNames = @json($points);
+
+  // Data pipa yang paling terakhir diambil dari server (auto-fill).
+  var lastTubeData = null;
+
+  if (tubeSelect && tubeDataUrl) {
+    var lastRequest = null;
+
+    tubeSelect.addEventListener('change', function () {
+      var no = tubeSelect.value;
+
+      // Reset dulu SEMUA field titik + NILAI UKUR saat ganti pipa
+      resetPointValues();
+      if (measuredInput) measuredInput.value = oldMeasuredValue();
+
+      lastTubeData = null;
+      if (! no) return;
+
+      // Abort request sebelumnya supaya tidak ada race condition
+      if (lastRequest) lastRequest.abort();
+
+      lastRequest = new XMLHttpRequest();
+      var url = tubeDataUrl.replace('__TUBE__', no) +
+                '?unit=' + encodeURIComponent(unit) +
+                '&section=' + encodeURIComponent(section);
+      lastRequest.open('GET', url);
+      lastRequest.setRequestHeader('Accept', 'application/json');
+      lastRequest.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+      lastRequest.onload = function () {
+        if (lastRequest.status === 200) {
+          try {
+            var data = JSON.parse(lastRequest.responseText);
+            lastTubeData = data;
+
+            // Isi NILAI AWAL kalau pipa sudah punya baseline
+            if (initialInput && data.initial !== null && data.initial !== undefined) {
+              initialInput.value = data.initial;
+            }
+
+            // Isi NILAI UKUR (independen per pipa) dari baseline
+            if (measuredInput && data.measured_mm !== null && data.measured_mm !== undefined) {
+              measuredInput.value = data.measured_mm;
+            }
+
+            // Isi SEMUA field NILAI TITIK (A/B/C/D) sekaligus dari
+            // nilai tersimpan masing-masing titik.
+            fillAllPointValues(data);
+          } catch (e) {
+            // Response bukan JSON -> biarkan field kosong
+          }
+        }
+        lastRequest = null;
+      };
+
+      lastRequest.onerror = function () {
+        lastRequest = null;
+      };
+
+      lastRequest.send();
+    });
+  }
+
+  // Isi SEMUA field NILAI TITIK (A/B/C/D) sekaligus dari data pipa.
+  // Field yang tidak punya nilai tersimpan dikosongkan.
+  function fillAllPointValues(data) {
+    if (! data || ! data.points) return;
+    pointNames.forEach(function (pt) {
+      var input = document.getElementById('nilai_' + pt);
+      if (! input) return;
+      var v = data.points[pt];
+      if (v !== undefined && v !== null) {
+        input.value = v;
+      } else {
+        input.value = oldPointValue(pt);
+      }
+    });
+  }
+
+  // Reset semua field NILAI TITIK ke nilai lama (setelah validasi gagal)
+  function resetPointValues() {
+    pointNames.forEach(function (pt) {
+      var input = document.getElementById('nilai_' + pt);
+      if (input) input.value = oldPointValue(pt);
+    });
+  }
+
+  // Nilai lama field titik (dari data-old-value) — biar tidak terhapus
+  function oldPointValue(pt) {
+    var input = document.getElementById('nilai_' + pt);
+    if (input && input.hasAttribute('data-old-value')) {
+      return input.getAttribute('data-old-value');
+    }
+    return '';
+  }
+
+  function oldMeasuredValue() {
+    if (measuredInput && measuredInput.hasAttribute('data-old-value')) {
+      return measuredInput.getAttribute('data-old-value');
+    }
+    return '';
+  }
+
+  // ============================================
+  // 2. TANGGAL UKUR SESI: cukup isi sekali,
+  //    berlaku untuk semua submit di sesi ini.
+  //    Tanpa JS sekalipun, controller tetap pakai
+  //    tanggal yang dikirim form per-submit.
+  // ============================================
+  var sessionDate = document.getElementById('session_date');
+  var form = document.getElementById('form-ukur');
+
+  // Field tanggal di form utama dibuat hidden alias —
+  // nilainya diambil dari session_date saat submit.
+  var hiddenDate = document.createElement('input');
+  hiddenDate.type = 'hidden';
+  hiddenDate.name = 'measured_at';
+  hiddenDate.value = sessionDate ? sessionDate.value : '';
+  if (form && sessionDate) {
+    form.appendChild(hiddenDate);
+
+    // Selalu sinkron tanggal sesi ke field hidden saat user mengubahnya
+    sessionDate.addEventListener('change', function () {
+      hiddenDate.value = sessionDate.value;
+    });
+
+    // Saat submit, pastikan nilai terbaru ikut terkirim
+    form.addEventListener('submit', function () {
+      hiddenDate.value = sessionDate.value;
+    });
+  }
+
+  // Tombol "Terapkan Tanggal untuk Semua Data Hari Ini"
+  var btnToday = document.getElementById('btn_set_date_today');
+  var dateStatus = document.getElementById('session_date_status');
+  var dateValue = document.getElementById('session_date_value');
+  if (btnToday && sessionDate && dateStatus && dateValue) {
+    btnToday.addEventListener('click', function () {
+      var today = new Date();
+      var yyyy = today.getFullYear();
+      var mm = String(today.getMonth() + 1).padStart(2, '0');
+      var dd = String(today.getDate()).padStart(2, '0');
+      sessionDate.value = yyyy + '-' + mm + '-' + dd;
+      if (hiddenDate) hiddenDate.value = sessionDate.value;
+
+      dateValue.textContent = sessionDate.value;
+      dateStatus.classList.remove('hidden');
+    });
+  }
+})();
+</script>
+@endpush
