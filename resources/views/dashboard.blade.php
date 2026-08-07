@@ -179,15 +179,15 @@
                         padding:14px 22px; background:#0e2a55; border-radius:999px; border:1px solid #1c3f6e;">
                         <span style="display:flex;align-items:center;gap:9px;">
                             <span style="width:14px;height:14px;border-radius:4px;background:{{ $statusColor['Safe'] }};flex-shrink:0;"></span>
-                            <span style="color:{{ $statusColor['Safe'] }};font-weight:800;font-size:12.5px;letter-spacing:.3px;">SAFE &lt;40%</span>
+                            <span style="color:{{ $statusColor['Safe'] }};font-weight:800;font-size:12.5px;letter-spacing:.3px;">SAFE &lt;100%-75%</span>
                         </span>
                         <span style="display:flex;align-items:center;gap:9px;">
                             <span style="width:14px;height:14px;border-radius:4px;background:{{ $statusColor['Warning'] }};flex-shrink:0;"></span>
-                            <span style="color:{{ $statusColor['Warning'] }};font-weight:800;font-size:12.5px;letter-spacing:.3px;">WARNING 40–80%</span>
+                            <span style="color:{{ $statusColor['Warning'] }};font-weight:800;font-size:12.5px;letter-spacing:.3px;">WARNING 75%-70%</span>
                         </span>
                         <span style="display:flex;align-items:center;gap:9px;">
                             <span style="width:14px;height:14px;border-radius:4px;background:{{ $statusColor['Critical'] }};flex-shrink:0;"></span>
-                            <span style="color:{{ $statusColor['Critical'] }};font-weight:800;font-size:12.5px;letter-spacing:.3px;">CRITICAL &gt;80%</span>
+                            <span style="color:{{ $statusColor['Critical'] }};font-weight:800;font-size:12.5px;letter-spacing:.3px;">CRITICAL &gt;70%</span>
                         </span>
                     </div>
                 </div>
@@ -198,7 +198,7 @@
             <div style="background:linear-gradient(180deg, rgba(0,26,87,0.25) 0%, rgba(14,32,56,1) 100%);border:1px solid rgba(255,255,255,0.06);border-radius:5px;padding:16px 18px;">
                 <div class="panel-title" style="display:flex;align-items:center;gap:10px;text-transform:uppercase;font-size:15px;letter-spacing:.4px;margin-bottom:0;">
                     <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#3fdc84" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 17 9 10 13 14 22 4"></polyline><polyline points="16 4 22 4 22 10"></polyline></svg>
-                    Perbandingan 5 Tahun Terakhir
+                    5-Year Comparison
                 </div>
                 <div id="comparison-legend" style="display:flex;flex-wrap:wrap;gap:26px;margin:14px 4px 16px 4px;color:#9fb0c3;font-size:12px;">Loading data...</div>
                 <div id="comparison-fig"></div>

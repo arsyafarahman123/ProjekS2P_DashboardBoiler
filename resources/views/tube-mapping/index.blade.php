@@ -210,7 +210,7 @@
             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-safe"></span> SAFE</span>
             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-watch"></span> WARNING</span>
             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-critical"></span> CRITICAL</span>
-            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-white/10 border border-white/20"></span> BELUM ADA DATA</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-white/10 border border-white/20"></span> NO DATA YET</span>
           </div>
         </div>
 
@@ -284,15 +284,20 @@
                       <span class="truncate" x-text="photo.nama_file"></span>
                     </div>
                   </a>
+                  @auth
                   <button @click="deletePhoto(photo.id)" class="text-red-400 hover:text-red-300 text-[10px] shrink-0" title="Hapus foto">✕</button>
+                  @endauth
                 </div>
               </template>
             </div>
             <div x-show="!tubePhotos().length" class="text-[10px] text-slate-500 mb-2">Belum ada foto.</div>
+            {{-- Upload cuma untuk admin yang sudah login. Guest cuma bisa lihat. --}}
+            @auth
             <div class="mt-2">
               <input type="file" @change="uploadPhoto($event)" class="text-[10px] text-slate-300 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:bg-accent file:text-black file:font-bold file:cursor-pointer" style="max-width:100%;">
               <div class="text-[9px] text-slate-500 mt-1">Semua tipe file didukung, ukuran besar tetap bisa diupload.</div>
             </div>
+            @endauth
           </div>
         </div>
       </div>
@@ -356,7 +361,7 @@
     </div>
 
     <div class="bg-panel rounded-lg p-4 mb-5">
-      <div class="text-xs font-bold tracking-wide mb-3">RINGKASAN KETEBALAN PIPA &mdash; {{ strtoupper($section) }}</div>
+      <div class="text-xs font-bold tracking-wide mb-3">TUBE THICKNESS SUMMARY &mdash; {{ strtoupper($section) }}</div>
       <div class="grid grid-cols-3 gap-3 mb-4">
         <div class="bg-white/[0.03] rounded p-3 text-center">
           <div class="text-[10px] text-slate-500 mb-1">MIN</div>
@@ -378,7 +383,7 @@
       <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
         <div class="text-xs font-bold tracking-wide">TABEL TITIK A&ndash;D PER PIPA &mdash; TUBE 1&ndash;{{ $tubeCount }}</div>
         <div class="flex items-center gap-3 text-[10px] text-slate-400">
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-safe"></span> 100%&ndash;75% AMAN</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-safe"></span> 100%&ndash;75% SAFE</span>
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-watch"></span> <75%&ndash;70% WARNING</span>
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-critical"></span> <70% CRITICAL</span>
         </div>
