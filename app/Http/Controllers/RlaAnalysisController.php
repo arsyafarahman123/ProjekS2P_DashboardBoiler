@@ -30,31 +30,7 @@ class RlaAnalysisController extends Controller
 
     public function index(Request $request)
     {
-        // Unit & tahun disamakan dengan Tube Mapping (BoilerTube::UNITS /
-        // ::YEARS) supaya kedua halaman narik dari sumber yang sama.
-        $units = BoilerTube::UNITS;
-        $years = BoilerTube::YEARS;
-        rsort($years);
-
-        $unit = $request->query('unit', BoilerTube::DEFAULT_UNIT);
-        if (!in_array($unit, $units, true)) {
-            $unit = BoilerTube::DEFAULT_UNIT;
-        }
-
-        $year = (int) $request->query('year', max(BoilerTube::YEARS));
-        if (!in_array($year, $years, true)) {
-            $year = max(BoilerTube::YEARS);
-        }
-
-        // Dropdown Boiler Section sekarang ikut BoilerArea per unit — SAMA
-        // seperti Tube Mapping (termasuk area tambahan yang dibuat admin
-        // lewat Add Area), bukan 5 opsi hardcode lagi.
-        $boilerSections = BoilerArea::where('unit', $unit)->orderBy('id')->pluck('name')->all();
-
-        $section = $request->query('section', 'Secondary Superheater');
-        if (!in_array($section, $boilerSections, true)) {
-            $section = $boilerSections[0] ?? 'Secondary Superheater';
-        }
+        [$unit, $section, $year, $boilerSections, $units, $years] = $this->resolveFilters($request);
 
         $data = $this->buildRealData($unit, $section, $year);
 
@@ -71,6 +47,138 @@ class RlaAnalysisController extends Controller
             'data'            => $data,
             'documents'       => $documents,
         ]);
+    }
+
+    /**
+     * Resolve unit/section/tahun dari query string, dengan fallback yang
+     * SAMA PERSIS seperti logic yang sebelumnya inline di index() — supaya
+     * exportPdf()/exportExcel() bisa pakai kombinasi unit/section/tahun
+     * yang identik dengan apa yang lagi ditampilkan di halaman saat user
+     * klik tombol export (bukan filter/fallback yang berbeda).
+     */
+    protected function resolveFilters(Request $request): array
+    {
+        $units = BoilerTube::UNITS;
+        $years = BoilerTube::YEARS;
+        rsort($years);
+
+        $unit = $request->query('unit', BoilerTube::DEFAULT_UNIT);
+        if (!in_array($unit, $units, true)) {
+            $unit = BoilerTube::DEFAULT_UNIT;
+        }
+
+        $year = (int) $request->query('year', max(BoilerTube::YEARS));
+        if (!in_array($year, $years, true)) {
+            $year = max(BoilerTube::YEARS);
+        }
+
+        $boilerSections = BoilerArea::where('unit', $unit)->orderBy('id')->pluck('name')->all();
+
+        $section = $request->query('section', 'Secondary Superheater');
+        if (!in_array($section, $boilerSections, true)) {
+            $section = $boilerSections[0] ?? 'Secondary Superheater';
+        }
+
+        return [$unit, $section, $year, $boilerSections, $units, $years];
+    }
+
+    /**
+     * Export panel RLA (Thickness, RUL, Priorities, Historical NDT) untuk
+     * section+unit+tahun yang lagi dipilih user, dalam bentuk PDF.
+     */
+    public function exportPdf(Request $request)
+    {
+        [$unit, $section, $year] = $this->resolveFilters($request);
+        $data = $this->buildRealData($unit, $section, $year);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('rla-analysis.export-pdf', [
+            'data'    => $data,
+            'unit'    => $unit,
+            'section' => $section,
+            'year'    => $year,
+        ])->setPaper('a4', 'portrait');
+
+        $filename = 'RLA-Report-' . \Illuminate\Support\Str::slug($section) . '-' . \Illuminate\Support\Str::slug($unit) . '-' . $year . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Export panel RLA yang sama ke Excel (.xlsx), tiap panel jadi sheet
+     * terpisah. Dibangun pakai SimpleXlsxWriter (ZipArchive bawaan PHP,
+     * TANPA package composer) karena maatwebsite/excel belum ada rilis
+     * stable yang support PHP 8.5 — lihat komentar di SimpleXlsxWriter.
+     */
+    public function exportExcel(Request $request)
+    {
+        [$unit, $section, $year] = $this->resolveFilters($request);
+        $data = $this->buildRealData($unit, $section, $year);
+
+        $writer = new \App\Support\SimpleXlsxWriter();
+
+        // Sheet 1: Thickness per Tube
+        $thicknessRows = [
+            ["Thickness per Tube — {$section} ({$unit}, {$year})"],
+            ['Tube Number', 'Titik A (mm)', 'Titik B (mm)', 'Titik C (mm)', 'Titik D (mm)', 'MWT (mm)'],
+        ];
+        foreach ($data['thickness_chart']['tube_numbers'] as $i => $no) {
+            $thicknessRows[] = [
+                $no,
+                $data['thickness_chart']['a'][$i] ?? null,
+                $data['thickness_chart']['b'][$i] ?? null,
+                $data['thickness_chart']['c'][$i] ?? null,
+                $data['thickness_chart']['d'][$i] ?? null,
+                $data['thickness_chart']['mwt'] ?? null,
+            ];
+        }
+        if (empty($data['thickness_chart']['tube_numbers'])) {
+            $thicknessRows[] = ['Belum ada data ketebalan untuk kombinasi Unit/Section/Tahun ini.'];
+        }
+        $writer->addSheet('Thickness', $thicknessRows, 2);
+
+        // Sheet 2: Top 5 RUL
+        $rulRows = [
+            ["Top 5 Remaining Useful Life — {$section} ({$unit}, {$year})"],
+            ['Tube ID', 'Section', 'RUL (months)', 'Status'],
+        ];
+        foreach ($data['rul_table'] as $row) {
+            $rulRows[] = [$row['tube_id'], $row['section'], $row['rul_months'], $row['status']];
+        }
+        if ($data['rul_table']->isEmpty()) {
+            $rulRows[] = ["Belum ada data tube untuk tahun {$year}."];
+        }
+        $writer->addSheet('Top 5 RUL', $rulRows, 2);
+
+        // Sheet 3: Risk Mitigation & Recommendations
+        $recRows = [
+            ["Risk Mitigation & Recommendations — {$section} ({$unit}, {$year})"],
+            ['Level', 'Rekomendasi'],
+        ];
+        if (empty($data['priorities'])) {
+            $recRows[] = ["Belum ada data pengukuran untuk {$section} pada kombinasi Unit/Tahun ini."];
+        } else {
+            foreach ($data['priorities'] as $pr) {
+                $recRows[] = [$pr['level'], $pr['text']];
+            }
+        }
+        $writer->addSheet('Recommendations', $recRows, 2);
+
+        // Sheet 4: Historical NDT
+        $ndtRows = [
+            ["Historical NDT — {$section} ({$unit})"],
+            ['Date', 'Tube ID', 'Creep %'],
+        ];
+        foreach ($data['historical_ndt'] as $row) {
+            $ndtRows[] = [$row['date'], $row['tube_id'], $row['creep_pct']];
+        }
+        if ($data['historical_ndt']->isEmpty()) {
+            $ndtRows[] = ["Belum ada riwayat NDT untuk {$section} — {$unit}."];
+        }
+        $writer->addSheet('Historical NDT', $ndtRows, 2);
+
+        $filename = 'RLA-Report-' . \Illuminate\Support\Str::slug($section) . '-' . \Illuminate\Support\Str::slug($unit) . '-' . $year . '.xlsx';
+
+        return $writer->download($filename);
     }
 
     /**
@@ -150,7 +258,7 @@ class RlaAnalysisController extends Controller
             ->orderByDesc('creep_pct')
             ->first();
 
-// RUL table: top-5 tube paling berisiko DI SECTION+UNIT+TAHUN
+        // RUL table: top-5 tube paling berisiko DI SECTION+UNIT+TAHUN
         // terpilih, biar konsisten sama panel lain di halaman ini (Thickness
         // Chart, Priority List, Historical NDT) yang juga ikut section aktif.
         // Kalau butuh top-5 lintas section se-Unit, itu udah ada di panel
@@ -201,30 +309,35 @@ class RlaAnalysisController extends Controller
      * buat kalimat rekomendasi bebas), TAPI tube_id/section/unit dan level
      * prioritas Priority 1 sekarang ikut status ASLI tube terpilih, bukan
      * random lagi.
+     *
+     * Kalau belum ada data tube sama sekali untuk section+unit+tahun
+     * terpilih ($selectedTube null), panel ini dikosongin (array kosong)
+     * biar konsisten sama panel Thickness Chart & RUL yang juga kosong —
+     * bukan malah nampilin rekomendasi template seolah-olah ada data.
      */
-protected function buildPriorities(string $unit, string $section, ?BoilerTube $selectedTube): array
-{
-    if (!$selectedTube) {
-        return [];
+    protected function buildPriorities(string $unit, string $section, ?BoilerTube $selectedTube): array
+    {
+        if (!$selectedTube) {
+            return [];
+        }
+
+        $tubeLabel = $selectedTube->tube_id;
+        $status = $selectedTube->status;
+
+        $p1Text = match ($status) {
+            'Critical' => "Replace Tube ID # {$tubeLabel} (Selected Tube) at Next Outage.",
+            'Warning'  => "Schedule NDT re-scan on Tube ID # {$tubeLabel} (Selected Tube) before next outage.",
+            'Safe'     => "Continue routine monitoring on Tube ID # {$tubeLabel} (Selected Tube).",
+            default    => "Belum ada data pengukuran untuk {$section} pada kombinasi Unit/Tahun ini.",
+        };
+
+        return [
+            ['level' => 'PRIORITY 1 (CRITICAL)', 'color' => 'critical', 'text' => $p1Text],
+            ['level' => 'PRIORITY 2', 'color' => 'high', 'text' => "Increase Sootblowing Frequency in {$section}."],
+            ['level' => 'PRIORITY 3', 'color' => 'medium', 'text' => "Review water chemistry logs for Unit {$unit}."],
+            ['level' => 'PRIORITY 4', 'color' => 'info', 'text' => "Update thickness survey schedule for {$section}."],
+        ];
     }
-
-    $tubeLabel = $selectedTube->tube_id;
-    $status = $selectedTube->status;
-
-    $p1Text = match ($status) {
-        'Critical' => "Replace Tube ID # {$tubeLabel} (Selected Tube) at Next Outage.",
-        'Warning'  => "Schedule NDT re-scan on Tube ID # {$tubeLabel} (Selected Tube) before next outage.",
-        'Safe'     => "Continue routine monitoring on Tube ID # {$tubeLabel} (Selected Tube).",
-        default    => "Belum ada data pengukuran untuk {$section} pada kombinasi Unit/Tahun ini.",
-    };
-
-    return [
-        ['level' => 'PRIORITY 1 (CRITICAL)', 'color' => 'critical', 'text' => $p1Text],
-        ['level' => 'PRIORITY 2', 'color' => 'high', 'text' => "Increase Sootblowing Frequency in {$section}."],
-        ['level' => 'PRIORITY 3', 'color' => 'medium', 'text' => "Review water chemistry logs for Unit {$unit}."],
-        ['level' => 'PRIORITY 4', 'color' => 'info', 'text' => "Update thickness survey schedule for {$section}."],
-    ];
-}
 
     /**
      * Map status asli BoilerTube ('Critical'/'Warning'/'Safe') ke class

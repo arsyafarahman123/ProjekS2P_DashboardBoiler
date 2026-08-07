@@ -43,7 +43,6 @@ Route::get('/tube-mapping', [TubeMappingController::class, 'index'])
 
 Route::get('/tube-mapping/tube/{tubeId}', [TubeMappingController::class, 'show'])
     ->name('tube-mapping.show');
-
 // Upload & serve foto per tube di card popup tube mapping
 Route::post('/tube-mapping/photo', [TubeMappingController::class, 'photoStore'])
     ->name('tube-mapping.photo.store');
@@ -64,6 +63,12 @@ Route::get('/tube-mapping/export/pdf', [TubeMappingController::class, 'exportPdf
 // ================================
 Route::get('/rla-analysis', [RlaAnalysisController::class, 'index'])
     ->name('rla-analysis');
+
+Route::get('/rla-analysis/export/pdf', [RlaAnalysisController::class, 'exportPdf'])
+    ->name('rla-analysis.export.pdf');
+
+Route::get('/rla-analysis/export/excel', [RlaAnalysisController::class, 'exportExcel'])
+    ->name('rla-analysis.export.excel');
 
 
 // ================================

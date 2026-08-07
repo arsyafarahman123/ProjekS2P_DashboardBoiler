@@ -498,16 +498,16 @@
           <h2>RISK MITIGATION OPTIONS &amp; RECOMMENDATIONS</h2>
           <div class="rec-sub">PRIORITIZE LIST</div>
 
-      <div class="priority-list">
-          @forelse ($data['priorities'] as $i => $pr)
-          <div class="priority p{{ $i + 1 }}">
-          <div class="p-title">{{ $pr['level'] }}:</div>
-          <div class="p-desc">{{ $pr['text'] }}</div>
-      </div>
-          @empty
-          <div style="color:var(--text-faint); text-align:center; padding:14px 0;">Belum ada data pengukuran untuk {{ $selectedSection }} pada kombinasi Unit/Tahun ini.</div>
-          @endforelse
-      </div>
+          <div class="priority-list">
+            @forelse ($data['priorities'] as $i => $pr)
+              <div class="priority p{{ $i + 1 }}">
+                <div class="p-title">{{ $pr['level'] }}:</div>
+                <div class="p-desc">{{ $pr['text'] }}</div>
+              </div>
+            @empty
+              <div style="color:var(--text-faint); text-align:center; padding:14px 0;">Belum ada data pengukuran untuk {{ $selectedSection }} pada kombinasi Unit/Tahun ini.</div>
+            @endforelse
+          </div>
         </div>
       </div>
     </div>
@@ -535,7 +535,8 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="text" placeholder="Filter Tube ID...">
         </div>
-        <button class="export-btn"><img src="{{ asset('images/download.png') }}" alt="" style="width:16px;height:16px;filter:brightness(0) invert(1);"> EXPORT RLA REPORT (PDF/EXCEL)</button>
+        <button class="export-btn" type="button" onclick="window.location.href='{{ route('rla-analysis.export.pdf', ['unit' => $selectedUnit, 'section' => $selectedSection, 'year' => $selectedYear]) }}'"><img src="{{ asset('images/download.png') }}" alt="" style="width:16px;height:16px;filter:brightness(0) invert(1);"> EXPORT PDF</button>
+        <button class="export-btn" type="button" style="margin-top:8px;" onclick="window.location.href='{{ route('rla-analysis.export.excel', ['unit' => $selectedUnit, 'section' => $selectedSection, 'year' => $selectedYear]) }}'"><img src="{{ asset('images/download.png') }}" alt="" style="width:16px;height:16px;filter:brightness(0) invert(1);"> EXPORT EXCEL</button>
       </div>
     </div>
 
