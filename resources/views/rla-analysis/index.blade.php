@@ -352,7 +352,7 @@
     <div class="title-row">
       <div class="title-left">
         <span class="accent-bar"></span>
-        <h1>RLA ANALYSIS: {{ strtoupper($selectedSection) }}</h1>
+        <h1>REMAINING LIFE ASSESSMENT ANALYSIS: {{ strtoupper($selectedSection) }}</h1>
       </div>
       <div class="header-logo"><img src="{{ asset('images/logo.png') }}" alt="S2P logo"></div>
     </div>
@@ -384,109 +384,91 @@
     <div class="content-grid">
       <div class="panel">
         <div class="panel-header">
-          <h2>REMAINING LIFE PREDICTION</h2>
+          <h2>THICKNESS PER TUBE &mdash; {{ strtoupper($selectedSection) }}</h2>
           <span class="tag">RLA-01</span>
         </div>
         <div class="chart-wrap">
-          <svg viewBox="0 0 800 400" width="100%" style="overflow:visible">
-            <!-- vertical gridlines -->
+          @php
+            $tc = $data['thickness_chart'];
+            $tubeNumbers = $tc['tube_numbers'];
+            $n = count($tubeNumbers);
+
+            // Area plot (koordinat px di dalam viewBox 0 0 900 400)
+            $chartX0 = 60; $chartX1 = 870;
+            $chartY0 = 10;  $chartY1 = 340; // y0 = atas (nilai besar), y1 = bawah (0)
+
+            // Skala Y: bulatin ke atas ke kelipatan 1mm, minimal 6mm biar ada ruang
+            $allVals = array_merge($tc['a'], $tc['b'], $tc['c'], $tc['d'], [$tc['mwt']]);
+            $yMax = max(6, ceil(max($allVals)) + 1);
+            $yMin = 0;
+
+            $xStep = $n > 1 ? ($chartX1 - $chartX0) / ($n - 1) : 0;
+            $yToPx = fn($v) => $chartY1 - (($v - $yMin) / ($yMax - $yMin)) * ($chartY1 - $chartY0);
+
+            $buildPoints = fn($series) => collect($series)
+                ->map(fn($v, $i) => round($chartX0 + $i * $xStep, 1) . ',' . round($yToPx($v), 1))
+                ->implode(' ');
+
+            $mwtY = round($yToPx($tc['mwt']), 1);
+          @endphp
+          <svg viewBox="0 0 900 400" width="100%" style="overflow:visible">
+            <!-- horizontal gridlines tiap 1mm -->
             <g stroke="rgba(127,212,232,0.14)" stroke-width="1">
-              <line x1="60" y1="10" x2="60" y2="340"/>
-              <line x1="140" y1="10" x2="140" y2="340"/>
-              <line x1="220" y1="10" x2="220" y2="340"/>
-              <line x1="300" y1="10" x2="300" y2="340"/>
-              <line x1="380" y1="10" x2="380" y2="340"/>
-              <line x1="460" y1="10" x2="460" y2="340"/>
-              <line x1="540" y1="10" x2="540" y2="340"/>
-              <line x1="620" y1="10" x2="620" y2="340"/>
-              <line x1="700" y1="10" x2="700" y2="340"/>
+              @for ($gv = $yMin; $gv <= $yMax; $gv++)
+                <line x1="{{ $chartX0 }}" y1="{{ round($yToPx($gv), 1) }}" x2="{{ $chartX1 }}" y2="{{ round($yToPx($gv), 1) }}"/>
+              @endfor
             </g>
             <!-- axis lines -->
             <g stroke="rgba(255,255,255,0.15)" stroke-width="1">
-              <line x1="60" y1="340" x2="740" y2="340"/>
+              <line x1="{{ $chartX0 }}" y1="{{ $chartY1 }}" x2="{{ $chartX1 }}" y2="{{ $chartY1 }}"/>
             </g>
-            <!-- y labels left -->
+            <!-- y labels -->
             <g font-size="11" fill="#8b9cb3">
-              <text x="30" y="16">200</text>
-              <text x="38" y="97">150</text>
-              <text x="38" y="178">100</text>
-              <text x="46" y="259">50</text>
-              <text x="46" y="340">0</text>
-            </g>
-            <!-- y labels right -->
-            <g font-size="11" fill="#8b9cb3">
-              <text x="750" y="16">2</text>
-              <text x="750" y="97">1.5</text>
-              <text x="750" y="178">1</text>
-              <text x="750" y="259">0.5</text>
-              <text x="750" y="340">0</text>
+              @for ($gv = $yMin; $gv <= $yMax; $gv++)
+                <text x="30" y="{{ round($yToPx($gv), 1) + 4 }}">{{ number_format($gv, 2) }}</text>
+              @endfor
             </g>
             <!-- axis titles -->
-            <text x="-175" y="16" transform="rotate(-90)" font-size="11" fill="#8b9cb3" text-anchor="middle">Remaining Life (Months)</text>
-            <text x="-175" y="792" transform="rotate(-90)" font-size="11" fill="#8b9cb3" text-anchor="middle">Thinning (mm)</text>
+            <text x="-175" y="16" transform="rotate(-90)" font-size="11" fill="#8b9cb3" text-anchor="middle">Thickness (mm)</text>
 
-            <!-- critical limit dashed -->
-            <line x1="60" y1="256" x2="740" y2="256" stroke="#ff6b6b" stroke-dasharray="6,5" stroke-width="1.3"/>
-            <text x="650" y="250" font-size="10" fill="#ff6b6b" font-weight="700">CRITICAL LIMIT</text>
+            <!-- MWT dashed -->
+            <line x1="{{ $chartX0 }}" y1="{{ $mwtY }}" x2="{{ $chartX1 }}" y2="{{ $mwtY }}" stroke="#ff6b6b" stroke-dasharray="6,5" stroke-width="1.3"/>
+            <text x="{{ $chartX1 - 90 }}" y="{{ $mwtY - 6 }}" font-size="10" fill="#ff6b6b" font-weight="700">MWT ({{ number_format($tc['mwt'], 2) }}mm)</text>
 
-            <!-- thinning rate (cyan) -->
-            <polyline fill="none" stroke="#7fd4e8" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"
-              points="60,325 115,300 170,275 225,255 280,235 335,222 390,205 445,175 500,145 555,110 610,80 665,55 700,42"/>
+            <!-- titik A -->
+            <polyline fill="none" stroke="#3fdc84" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"
+              points="{{ $buildPoints($tc['a']) }}"/>
+            <!-- titik B -->
+            <polyline fill="none" stroke="#7fd4e8" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"
+              points="{{ $buildPoints($tc['b']) }}"/>
+            <!-- titik C -->
+            <polyline fill="none" stroke="#e0c23c" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"
+              points="{{ $buildPoints($tc['c']) }}"/>
+            <!-- titik D -->
+            <polyline fill="none" stroke="#a78bfa" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"
+              points="{{ $buildPoints($tc['d']) }}"/>
 
-            <!-- watch tubes (green) -->
-            <polyline fill="none" stroke="#3fdc84" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"
-              points="60,58 115,70 170,88 225,100 280,108 335,118 390,133 445,155 500,180 555,205 610,225 665,242 700,252"/>
-
-            <!-- watch avg (yellow) -->
-            <polyline fill="none" stroke="#e0c23c" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"
-              points="60,63 115,78 170,100 225,120 280,135 335,148 390,168 445,192 500,218 555,245 610,268 665,285 700,295"/>
-
-            <!-- selected tube (red) -->
-            <polyline fill="none" stroke="#ff4d4f" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"
-              points="60,68 115,105 170,150 225,192 280,225 335,255 390,285 445,312 500,330 555,338 610,340 665,340 700,340"/>
-
-            <!-- x labels -->
-            <g font-size="10" fill="#8b9cb3">
-              <text x="45" y="358">2023-Q4</text>
-              <text x="125" y="358">2024-Q3</text>
-              <text x="205" y="358">2025-Q2</text>
-              <text x="285" y="358">2026-Q1</text>
-              <text x="365" y="358">2026-Q4</text>
-              <text x="445" y="358">2027-Q3</text>
-              <text x="525" y="358">2028-Q2</text>
-              <text x="605" y="358">2029-Q1</text>
+            <!-- x labels: nomor tube (di-sampling), dirotasi biar muat -->
+            <g font-size="8.5" fill="#8b9cb3">
+              @foreach ($tubeNumbers as $i => $no)
+                <text x="{{ round($chartX0 + $i * $xStep, 1) }}" y="352" text-anchor="end" transform="rotate(-60 {{ round($chartX0 + $i * $xStep, 1) }} 352)">{{ $no }}</text>
+              @endforeach
             </g>
-
-            <!-- remaining life hover zones (invisible, driven by JS below) -->
-            <g id="rlHoverZones">
-              <rect class="hover-zone" x="20"  y="10" width="80"  height="330" data-period="2023-Q4" data-months="168" data-eta="2037-Q4"/>
-              <rect class="hover-zone" x="100" y="10" width="80"  height="330" data-period="2024-Q3" data-months="132" data-eta="2035-Q3"/>
-              <rect class="hover-zone" x="180" y="10" width="80"  height="330" data-period="2025-Q2" data-months="94"  data-eta="2033-Q1"/>
-              <rect class="hover-zone" x="260" y="10" width="80"  height="330" data-period="2026-Q1" data-months="64"  data-eta="2031-Q2"/>
-              <rect class="hover-zone" x="340" y="10" width="80"  height="330" data-period="2026-Q4" data-months="37"  data-eta="2029-Q4"/>
-              <rect class="hover-zone" x="420" y="10" width="80"  height="330" data-period="2027-Q3" data-months="14"  data-eta="2028-Q4"/>
-              <rect class="hover-zone" x="500" y="10" width="80"  height="330" data-period="2028-Q2" data-months="3"   data-eta="2028-Q3"/>
-              <rect class="hover-zone" x="580" y="10" width="160" height="330" data-period="2029-Q1" data-months="0"   data-eta="2029-Q1"/>
-            </g>
+            <text x="{{ ($chartX0 + $chartX1) / 2 }}" y="392" font-size="11" fill="#8b9cb3" text-anchor="middle">Tube Number</text>
           </svg>
 
-          <div class="rl-tooltip" id="rlTooltip">
-            <div class="rl-period" id="rlPeriod"></div>
-            <div class="rl-value" id="rlValue"></div>
-            <div class="rl-eta" id="rlEta"></div>
-          </div>
-
           <div class="legend-lines">
-            <span><img src="{{ asset('images/tube_merah.png') }}" alt=""> Selected Tube</span>
-            <span><img src="{{ asset('images/tube_kuning.png') }}" alt=""> Watch Avg</span>
-            <span><img src="{{ asset('images/tube_hijau.png') }}" alt=""> Watch Tubes</span>
-            <span><img src="{{ asset('images/tube_abu.png') }}" alt=""> Design Limit</span>
-            <span><img src="{{ asset('images/tube_navy.png') }}" alt=""> Thinning Rate</span>
+            <span><i style="display:inline-block;width:14px;height:3px;background:#3fdc84;vertical-align:middle;margin-right:4px;"></i>Titik A</span>
+            <span><i style="display:inline-block;width:14px;height:3px;background:#7fd4e8;vertical-align:middle;margin-right:4px;"></i>Titik B</span>
+            <span><i style="display:inline-block;width:14px;height:3px;background:#e0c23c;vertical-align:middle;margin-right:4px;"></i>Titik C</span>
+            <span><i style="display:inline-block;width:14px;height:3px;background:#a78bfa;vertical-align:middle;margin-right:4px;"></i>Titik D</span>
+            <span><i style="display:inline-block;width:14px;height:0;border-top:2px dashed #ff6b6b;vertical-align:middle;margin-right:4px;"></i>MWT</span>
           </div>
-          <div class="legend-boxes">
-            <span><i style="background:#3fdc84"></i>SAFE</span>
-            <span><i style="background:#e0c23c"></i>WATCH</span>
-            <span><i style="background:#ff4d4f"></i>CRITICAL</span>
+          <div class="legend-boxes" style="margin-top:6px;">
+            <span style="color:#8b9cb3;font-size:11px;">
+              Secara umum nilai ketebalan {{ strtolower($selectedSection) }} masih normal dan berada di atas MWT, rataan nilai cukup homogen
+              &mdash; area bend cenderung sedikit lebih rendah daripada area straight.
+            </span>
           </div>
         </div>
       </div>
@@ -494,41 +476,21 @@
       <div class="right-col">
         <div class="panel">
           <div class="panel-header">
-            <h2>REMAINING USEFUL LIFE (RUL)</h2>
+            <h2>TOP 5 REMAINING USEFUL LIFE (RUL)</h2>
             <span class="tag">RUL-01</span>
           </div>
           <table class="rul-table">
             <tr><th>TUBE ID</th><th>SECTION</th><th>RUL</th><th>STATUS</th></tr>
-            <tr>
-              <td class="tube-id">SH-2-R12-T18</td>
-              <td>Sec. Superheater</td>
-              <td>1 mo</td>
-              <td><span class="rul-badge critical">CRITICAL</span></td>
-            </tr>
-            <tr>
-              <td class="tube-id">SH-2-R12-T15</td>
-              <td>Sec. Superheater</td>
-              <td>14 mo</td>
-              <td><span class="rul-badge watch">WATCH</span></td>
-            </tr>
-            <tr>
-              <td class="tube-id">SH-1-R09-T22</td>
-              <td>Pri. Superheater</td>
-              <td>37 mo</td>
-              <td><span class="rul-badge watch">WATCH</span></td>
-            </tr>
-            <tr>
-              <td class="tube-id">RH-1-R05-T09</td>
-              <td>Reheater</td>
-              <td>94 mo</td>
-              <td><span class="rul-badge safe">SAFE</span></td>
-            </tr>
-            <tr>
-              <td class="tube-id">EC-3-R02-T04</td>
-              <td>Economizer</td>
-              <td>132 mo</td>
-              <td><span class="rul-badge safe">SAFE</span></td>
-            </tr>
+            @forelse ($data['rul_table'] as $row)
+              <tr>
+                <td class="tube-id">{{ $row['tube_id'] }}</td>
+                <td>{{ $row['section'] }}</td>
+                <td>{{ $row['rul_months'] }} mo</td>
+                <td><span class="rul-badge {{ $row['badge'] }}">{{ strtoupper($row['status']) }}</span></td>
+              </tr>
+            @empty
+              <tr><td colspan="4" style="color:var(--text-faint); text-align:center; padding:14px 0;">Belum ada data tube untuk tahun {{ $selectedYear }}.</td></tr>
+            @endforelse
           </table>
         </div>
 
@@ -536,24 +498,16 @@
           <h2>RISK MITIGATION OPTIONS &amp; RECOMMENDATIONS</h2>
           <div class="rec-sub">PRIORITIZE LIST</div>
 
-          <div class="priority-list">
-            <div class="priority p1">
-              <div class="p-title">PRIORITY 1 (CRITICAL):</div>
-              <div class="p-desc">Replace Tube ID # SH-2-R12-T18 (Selected Tube) at Next Outage.</div>
-            </div>
-            <div class="priority p2">
-              <div class="p-title">PRIORITY 2:</div>
-              <div class="p-desc">Increase Sootblowing Frequency in Secondary Superheater.</div>
-            </div>
-            <div class="priority p3">
-              <div class="p-title">PRIORITY 3:</div>
-              <div class="p-desc">Adjust Burner 4 for Flame Distribution optimization.</div>
-            </div>
-            <div class="priority p4">
-              <div class="p-title">PRIORITY 4:</div>
-              <div class="p-desc">Conduct specific chemical cleaning on Economizer tubes during next annual shutdown.</div>
-            </div>
-          </div>
+      <div class="priority-list">
+          @forelse ($data['priorities'] as $i => $pr)
+          <div class="priority p{{ $i + 1 }}">
+          <div class="p-title">{{ $pr['level'] }}:</div>
+          <div class="p-desc">{{ $pr['text'] }}</div>
+      </div>
+          @empty
+          <div style="color:var(--text-faint); text-align:center; padding:14px 0;">Belum ada data pengukuran untuk {{ $selectedSection }} pada kombinasi Unit/Tahun ini.</div>
+          @endforelse
+      </div>
         </div>
       </div>
     </div>
@@ -563,8 +517,15 @@
         <h2>HISTORICAL NDT</h2>
         <table class="ndt">
           <tr><th>Date</th><th>Tube ID</th><th>Creep %</th></tr>
-          <tr><td>2019-06</td><td class="tube-id">SH-2-R12-T18</td><td class="creep">15.5%</td></tr>
-          <tr><td>2028-10</td><td class="tube-id">SH-2-R12-T18</td><td class="creep">15.5%</td></tr>
+          @forelse ($data['historical_ndt'] as $row)
+            <tr>
+              <td>{{ $row['date'] }}</td>
+              <td class="tube-id">{{ $row['tube_id'] }}</td>
+              <td class="creep">{{ number_format($row['creep_pct'], 1) }}%</td>
+            </tr>
+          @empty
+            <tr><td colspan="3" style="color:var(--text-faint); text-align:center; padding:14px 0;">Belum ada riwayat NDT untuk {{ $selectedSection }} — {{ $selectedUnit }}.</td></tr>
+          @endforelse
         </table>
       </div>
 
@@ -713,48 +674,4 @@
   </main>
 
 @endsection
-
-@push('scripts')
-<script>
-    (function(){
-      const wrap = document.querySelector('.chart-wrap');
-      const tooltip = document.getElementById('rlTooltip');
-      const periodEl = document.getElementById('rlPeriod');
-      const valueEl = document.getElementById('rlValue');
-      const etaEl = document.getElementById('rlEta');
-      const zones = document.querySelectorAll('.hover-zone');
-
-      zones.forEach(zone => {
-        zone.addEventListener('mousemove', (e) => {
-          const period = zone.getAttribute('data-period');
-          const months = zone.getAttribute('data-months');
-          const eta = zone.getAttribute('data-eta');
-
-          periodEl.textContent = 'PER ' + period;
-          valueEl.textContent = 'Remaining Life: ~' + months + ' bulan';
-          etaEl.textContent = months == 0
-            ? 'Estimasi sudah mencapai batas kritis'
-            : 'Perkiraan habis: ' + eta;
-
-          const wrapRect = wrap.getBoundingClientRect();
-          let left = e.clientX - wrapRect.left + 14;
-          let top = e.clientY - wrapRect.top - 46;
-
-          // keep tooltip inside the chart-wrap box
-          const maxLeft = wrapRect.width - 190;
-          if (left > maxLeft) left = e.clientX - wrapRect.left - 190;
-          if (top < 0) top = e.clientY - wrapRect.top + 16;
-
-          tooltip.style.left = left + 'px';
-          tooltip.style.top = top + 'px';
-          tooltip.style.display = 'block';
-        });
-
-        zone.addEventListener('mouseleave', () => {
-          tooltip.style.display = 'none';
-        });
-      });
-    })();
-</script>
-@endpush
 

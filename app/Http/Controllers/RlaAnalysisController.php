@@ -2,59 +2,123 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BoilerArea;
+use App\Models\BoilerTube;
 use App\Models\RlaDocument;
+use App\Models\TubeMeasurement;
 use Illuminate\Http\Request;
 
 class RlaAnalysisController extends Controller
 {
     /**
-     * Dropdown options available on the page.
-     * NOTE: Unit "1&2" is intentionally ONE option (not "1" and "2" separately).
+     * Minimum Wall Thickness (MWT) acuan tiap section (mm) — ini batas
+     * standar teknik yang dipakai sebagai garis putus-putus di chart,
+     * BUKAN data hasil ukur (jadi tetap konstanta, bukan ditarik dari
+     * TubeMeasurement/TubeBaseline).
      */
-    protected array $boilerSections = [
-        'Economizer',
-        'Waterwall',
-        'Primary Superheater',
-        'Secondary Superheater',
-        'Reheater',
+    protected array $mwtBySection = [
+        'Furnace Bottom Slope'         => 4.20,
+        'Furnace Waterwall Tube'       => 4.20,
+        'Platen Superheater'           => 4.80,
+        'Final Superheater'            => 4.80,
+        'Low Temperature Superheater'  => 4.50,
+        'Primary Superheater'          => 4.50,
+        'Secondary Superheater'        => 5.00,
+        'Economizer'                   => 2.80,
+        'Sootblower Area'              => 4.20,
     ];
-
-    protected array $units = ['1&2', '3', '3A'];
-
-    protected array $years = [2022, 2023, 2024, 2025, 2026];
 
     public function index(Request $request)
     {
+        // Unit & tahun disamakan dengan Tube Mapping (BoilerTube::UNITS /
+        // ::YEARS) supaya kedua halaman narik dari sumber yang sama.
+        $units = BoilerTube::UNITS;
+        $years = BoilerTube::YEARS;
+        rsort($years);
+
+        $unit = $request->query('unit', BoilerTube::DEFAULT_UNIT);
+        if (!in_array($unit, $units, true)) {
+            $unit = BoilerTube::DEFAULT_UNIT;
+        }
+
+        $year = (int) $request->query('year', max(BoilerTube::YEARS));
+        if (!in_array($year, $years, true)) {
+            $year = max(BoilerTube::YEARS);
+        }
+
+        // Dropdown Boiler Section sekarang ikut BoilerArea per unit — SAMA
+        // seperti Tube Mapping (termasuk area tambahan yang dibuat admin
+        // lewat Add Area), bukan 5 opsi hardcode lagi.
+        $boilerSections = BoilerArea::where('unit', $unit)->orderBy('id')->pluck('name')->all();
+
         $section = $request->query('section', 'Secondary Superheater');
-        $unit    = $request->query('unit', '3A');
-        $year    = (int) $request->query('year', 2026);
-
-        // Guard against invalid/unknown query values falling through
-        if (!in_array($section, $this->boilerSections, true)) {
-            $section = $this->boilerSections[0];
-        }
-        if (!in_array($unit, $this->units, true)) {
-            $unit = $this->units[0];
-        }
-        if (!in_array($year, $this->years, true)) {
-            $year = end($this->years);
+        if (!in_array($section, $boilerSections, true)) {
+            $section = $boilerSections[0] ?? 'Secondary Superheater';
         }
 
-        $data = $this->generateDummyData($section, $unit, $year);
+        $data = $this->buildRealData($unit, $section, $year);
 
         // Dokumen RLA yang relevan dengan unit & tahun terpilih
         $documents = $this->getRelatedDocuments($unit, $year);
 
         return view('rla-analysis.index', [
-            'boilerSections' => $this->boilerSections,
-            'units'          => $this->units,
-            'years'          => $this->years,
+            'boilerSections' => $boilerSections,
+            'units'          => $units,
+            'years'          => $years,
             'selectedSection' => $section,
             'selectedUnit'    => $unit,
             'selectedYear'    => $year,
             'data'            => $data,
             'documents'       => $documents,
         ]);
+    }
+
+    /**
+     * Data grafik "Thickness per Tube Number" — ditarik LANGSUNG dari
+     * TubeMeasurement (titik A-D per nomor tube), sumber data yang sama
+     * dipakai tabel titik A-D di Tube Mapping. Sumbu-X di-sampling tiap 6
+     * nomor tube (meniru pola Gambar 18 di laporan assessment mekanik),
+     * nggak perlu render semua tube. MWT tetap konstanta standar per
+     * section (lihat $mwtBySection), bukan data hasil ukur.
+     */
+    protected function buildThicknessChart(string $unit, string $section, int $year): array
+    {
+        $points = TubeMeasurement::POINTS; // ['A','B','C','D']
+
+        $rows = TubeMeasurement::where('unit', $unit)
+            ->where('section', $section)
+            ->where('year', $year)
+            ->get()
+            ->groupBy('tube_number')
+            // Cuma pakai tube yang 4 titiknya (A-D) lengkap, biar garis di
+            // chart nggak putus-putus karena data kosong.
+            ->filter(fn ($rowsForTube) => $rowsForTube->pluck('point')->unique()->count() >= count($points));
+
+        $tubeNumbers = $rows->keys()
+            ->map(fn ($n) => (int) $n)
+            ->sort()
+            ->values()
+            ->filter(fn ($n, $i) => $i % 6 === 0)
+            ->values()
+            ->all();
+
+        $series = ['a' => [], 'b' => [], 'c' => [], 'd' => []];
+        foreach ($tubeNumbers as $no) {
+            $pointRows = $rows[$no]->keyBy('point');
+            foreach ($points as $p) {
+                $val = $pointRows[$p]->thickness_mm ?? null;
+                $series[strtolower($p)][] = $val !== null ? round((float) $val, 2) : null;
+            }
+        }
+
+        return [
+            'tube_numbers' => $tubeNumbers,
+            'a' => $series['a'],
+            'b' => $series['b'],
+            'c' => $series['c'],
+            'd' => $series['d'],
+            'mwt' => $this->mwtBySection[$section] ?? 4.50,
+        ];
     }
 
     /**
@@ -68,163 +132,111 @@ class RlaAnalysisController extends Controller
     }
 
     /**
-     * Build a deterministic (seeded) dummy dataset so the same
-     * Section + Unit + Tahun combination always returns the same numbers.
+     * Bangun semua data panel RLA dari data Tube Mapping ASLI (BoilerTube +
+     * TubeMeasurement), bukan random lagi. Kalau kombinasi unit/section/
+     * tahun belum punya data pengukuran (mis. Unit 1/2/3 yang belum diisi
+     * admin lewat Input Data), panel terkait akan kosong apa adanya —
+     * bukan angka karangan.
      */
-    protected function generateDummyData(string $section, string $unit, int $year): array
+    protected function buildRealData(string $unit, string $section, int $year): array
     {
-        $seedKey = $section . '|' . $unit . '|' . $year;
-        mt_srand(crc32($seedKey));
+        $thicknessChart = $this->buildThicknessChart($unit, $section, $year);
 
-        // --- Risk profile: unit "1&2" is the oldest equipment -> higher risk baseline
-        $riskBias = match ($unit) {
-            '1&2' => 1.25,
-            '3'   => 1.0,
-            '3A'  => 0.8,
-            default => 1.0,
-        };
-        // Older years -> slightly worse condition (equipment has degraded more by "today")
-        $yearBias = 1 + ((2026 - $year) * 0.03);
-        $risk = $riskBias * $yearBias;
+        // Tube paling kritis di section+unit+tahun terpilih (creep_pct
+        // tertinggi) → jadi "Selected Tube" buat judul chart & priority list.
+        $selectedTube = BoilerTube::where('unit', $unit)
+            ->where('section', $section)
+            ->where('year', $year)
+            ->orderByDesc('creep_pct')
+            ->first();
 
-        // --- Top stat cards ---
-        $efficiency = round(max(70, min(97, 92 - ($risk * 6) + mt_rand(-200, 200) / 100)), 1);
-        $boilerLoad = mt_rand(70, 98);
-        $activeAlerts = min(6, max(0, (int) round(1 + $risk + mt_rand(0, 2))));
-        $criticalAlerts = min($activeAlerts, (int) round(max(0, $risk - 0.7) + (mt_rand(0, 100) < 40 ? 1 : 0)));
-        $status = $activeAlerts >= 5 ? 'DEGRADED' : 'ACTIVE';
+// RUL table: top-5 tube paling berisiko DI SECTION+UNIT+TAHUN
+        // terpilih, biar konsisten sama panel lain di halaman ini (Thickness
+        // Chart, Priority List, Historical NDT) yang juga ikut section aktif.
+        // Kalau butuh top-5 lintas section se-Unit, itu udah ada di panel
+        // "Top Priority" pada halaman Tube Mapping.
+        $rulTable = BoilerTube::query()
+            ->where('unit', $unit)
+            ->where('section', $section)
+            ->where('year', $year)
+            ->orderByDesc('creep_pct')
+            ->orderBy('remaining_life_months')
+            ->limit(5)
+            ->get()
+            ->map(fn ($t) => [
+                'tube_id'    => $t->tube_id,
+                'section'    => $t->section,
+                'rul_months' => $t->remaining_life_months,
+                'status'     => $t->status,
+                'badge'      => $this->statusBadgeClass($t->status),
+            ]);
 
-        // --- Tube ID, generated from section + unit ---
-        $sectionCode = match ($section) {
-            'Economizer'             => 'ECO',
-            'Waterwall'              => 'WW',
-            'Primary Superheater'    => 'SH-1',
-            'Secondary Superheater'  => 'SH-2',
-            'Reheater'               => 'RH',
-            default                  => 'SH-2',
-        };
-        $unitCode = str_replace('&', '', $unit); // "1&2" -> "12" for the tube code
-        $tubeId = sprintf('%s-U%s-R%d-T%d', $sectionCode, $unitCode, mt_rand(1, 20), mt_rand(1, 30));
-        $materials = ['T91', 'T92', 'SA213-T22', 'SA210-A1'];
-        $material = $materials[array_rand($materials)];
-        $remainingLifeMonths = max(1, (int) round(24 / $risk) - mt_rand(0, 6));
+        // Historical NDT: riwayat scan tube di section+unit terpilih —
+        // sumber & urutan sama seperti panel Historical NDT di Tube Mapping.
+        $historicalNdt = BoilerTube::query()
+            ->where('unit', $unit)
+            ->where('section', $section)
+            ->orderByDesc('scan_date')
+            ->limit(6)
+            ->get()
+            ->map(fn ($t) => [
+                'date'      => $t->scan_date?->format('Y-m'),
+                'tube_id'   => $t->tube_id,
+                'creep_pct' => $t->creep_pct,
+            ]);
 
-        // --- Remaining Life Prediction chart (quarterly points, 3 years back to 3 years ahead) ---
-        $labels = [];
-        $selectedTube = [];
-        $watchAvg = [];
-        $watchTubes = [];
-        $thinningRate = [];
-        $startYear = $year - 3;
-        $quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
-        $points = 20;
-
-        $selectedStart = 160 + mt_rand(-15, 15);
-        $watchAvgStart = $selectedStart - mt_rand(5, 15);
-        $watchTubesStart = $selectedStart - mt_rand(10, 25);
-
-        // Selected Tube hits 0 sooner when risk is higher
-        $selectedZeroAt = max(6, (int) round($points * (1 / $risk) * 0.55));
-
-        for ($i = 0; $i < $points; $i++) {
-            $qy = $startYear + intdiv($i, 4);
-            $labels[] = $qy . '-' . $quarters[$i % 4];
-
-            $decayNoise = mt_rand(-4, 4);
-
-            $selVal = $i < $selectedZeroAt
-                ? max(0, round($selectedStart * (1 - ($i / $selectedZeroAt)) + $decayNoise))
-                : 0;
-            $selectedTube[] = $selVal;
-
-            $avgVal = max(10, round($watchAvgStart - ($i * ($watchAvgStart / ($points * 1.3))) + $decayNoise));
-            $watchAvg[] = $avgVal;
-
-            $tubesVal = max(15, round($watchTubesStart - ($i * ($watchTubesStart / ($points * 1.8))) + $decayNoise));
-            $watchTubes[] = $tubesVal;
-
-            $thinningRate[] = round(min(2, ($i / $points) * 2 * $risk) + (mt_rand(-5, 5) / 100), 2);
-        }
-        $designLimit = 60;
-
-        // --- Risk Mitigation priorities ---
-        $priorityPool = [
-            'critical' => [
-                "Replace Tube ID # {$tubeId} (Selected Tube) at Next Outage.",
-                "Isolate and inspect {$section} header welds before restart.",
-                "Schedule emergency NDT re-scan on {$tubeId} within 2 weeks.",
-            ],
-            'high' => [
-                "Increase Sootblowing Frequency in {$section}.",
-                "Reduce firing rate on Unit {$unit} until next inspection window.",
-                "Re-calibrate flow instrumentation on {$section} bank.",
-            ],
-            'medium' => [
-                "Adjust Burner 4 for Flame Distribution optimization.",
-                "Review water chemistry logs for Unit {$unit}.",
-                "Update thickness survey schedule for {$section}.",
-            ],
-            'info' => [
-                "Conduct specific chemical cleaning on {$section} tubes during next annual shutdown.",
-                "Archive current NDT baseline for trend comparison.",
-                "Plan spare tube procurement for next major outage.",
-            ],
-        ];
-        $priorities = [
-            ['level' => 'PRIORITY 1 (CRITICAL)', 'color' => 'critical', 'text' => $priorityPool['critical'][array_rand($priorityPool['critical'])]],
-            ['level' => 'PRIORITY 2', 'color' => 'high', 'text' => $priorityPool['high'][array_rand($priorityPool['high'])]],
-            ['level' => 'PRIORITY 3', 'color' => 'medium', 'text' => $priorityPool['medium'][array_rand($priorityPool['medium'])]],
-            ['level' => 'PRIORITY 4', 'color' => 'info', 'text' => $priorityPool['info'][array_rand($priorityPool['info'])]],
-        ];
-
-        // --- Creep percentage chart (weekly, 7 points, gently increasing) ---
-        $creepLabels = [];
-        $creepValues = [];
-        $creepStart = 15 + ($risk * 8) + mt_rand(0, 5);
-        $baseDate = \DateTime::createFromFormat('Y-m-d', "{$year}-01-07");
-        for ($i = 0; $i < 7; $i++) {
-            $d = clone $baseDate;
-            $d->modify("+{$i} week" . ($i === 1 ? '' : 's'));
-            $creepLabels[] = $d->format('M j');
-            $creepValues[] = round(min(60, $creepStart + ($i * (3 + $risk * 1.5)) + mt_rand(-1, 1)), 1);
-        }
-        $currentCreep = end($creepValues);
-
-        // --- Historical NDT table ---
-        $historicalNdt = [
-            ['date' => ($year - 7) . '-06', 'tube_id' => $tubeId, 'creep' => round($currentCreep - mt_rand(3, 8), 1)],
-            ['date' => ($year + 2) . '-10', 'tube_id' => $tubeId, 'creep' => $currentCreep],
-        ];
-
-        // --- NDT report panel ---
-        $findings = ['DETECTED CORROSION / PITTING', 'DETECTED WALL THINNING', 'DETECTED CREEP CAVITATION', 'NO SIGNIFICANT FINDINGS'];
-        $finding = $risk > 1 ? $findings[array_rand(array_slice($findings, 0, 3))] : $findings[array_rand($findings)];
+        $priorities = $this->buildPriorities($unit, $section, $selectedTube);
 
         return [
-            'status'          => $status,
-            'efficiency'      => $efficiency,
-            'active_alerts'   => $activeAlerts,
-            'critical_alerts' => $criticalAlerts,
-            'boiler_load'     => $boilerLoad,
-            'tube_id'         => $tubeId,
-            'material'        => $material,
-            'remaining_life_months' => $remainingLifeMonths,
-            'chart' => [
-                'labels'        => $labels,
-                'selected_tube' => $selectedTube,
-                'watch_avg'     => $watchAvg,
-                'watch_tubes'   => $watchTubes,
-                'thinning_rate' => $thinningRate,
-                'design_limit'  => $designLimit,
-            ],
-            'priorities' => $priorities,
-            'creep' => [
-                'labels'  => $creepLabels,
-                'values'  => $creepValues,
-                'current' => $currentCreep,
-            ],
-            'historical_ndt' => $historicalNdt,
-            'ndt_finding'    => $finding,
+            'thickness_chart' => $thicknessChart,
+            'selected_tube'   => $selectedTube,
+            'rul_table'       => $rulTable,
+            'historical_ndt'  => $historicalNdt,
+            'priorities'      => $priorities,
         ];
+    }
+
+    /**
+     * Rekomendasi mitigasi — teksnya tetap template (belum ada sumber data
+     * buat kalimat rekomendasi bebas), TAPI tube_id/section/unit dan level
+     * prioritas Priority 1 sekarang ikut status ASLI tube terpilih, bukan
+     * random lagi.
+     */
+protected function buildPriorities(string $unit, string $section, ?BoilerTube $selectedTube): array
+{
+    if (!$selectedTube) {
+        return [];
+    }
+
+    $tubeLabel = $selectedTube->tube_id;
+    $status = $selectedTube->status;
+
+    $p1Text = match ($status) {
+        'Critical' => "Replace Tube ID # {$tubeLabel} (Selected Tube) at Next Outage.",
+        'Warning'  => "Schedule NDT re-scan on Tube ID # {$tubeLabel} (Selected Tube) before next outage.",
+        'Safe'     => "Continue routine monitoring on Tube ID # {$tubeLabel} (Selected Tube).",
+        default    => "Belum ada data pengukuran untuk {$section} pada kombinasi Unit/Tahun ini.",
+    };
+
+    return [
+        ['level' => 'PRIORITY 1 (CRITICAL)', 'color' => 'critical', 'text' => $p1Text],
+        ['level' => 'PRIORITY 2', 'color' => 'high', 'text' => "Increase Sootblowing Frequency in {$section}."],
+        ['level' => 'PRIORITY 3', 'color' => 'medium', 'text' => "Review water chemistry logs for Unit {$unit}."],
+        ['level' => 'PRIORITY 4', 'color' => 'info', 'text' => "Update thickness survey schedule for {$section}."],
+    ];
+}
+
+    /**
+     * Map status asli BoilerTube ('Critical'/'Warning'/'Safe') ke class
+     * badge yang sudah ada di CSS (.rul-badge.critical/.watch/.safe).
+     */
+    protected function statusBadgeClass(?string $status): string
+    {
+        return match ($status) {
+            'Critical' => 'critical',
+            'Warning'  => 'watch',
+            'Safe'     => 'safe',
+            default    => 'safe',
+        };
     }
 }
