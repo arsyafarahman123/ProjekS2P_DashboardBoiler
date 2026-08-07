@@ -19,6 +19,16 @@
         @endforelse
       </select>
     </div>
+    @if (isset($years))
+      <div>
+        <label class="field-label">3. TAHUN:</label>
+        <select name="year" onchange="this.form.submit()" class="field-input" style="min-width:100px;">
+          @foreach($years as $y)
+            <option value="{{ $y }}" @selected((int) ($activeYear ?? 0) === (int) $y)>{{ $y }}</option>
+          @endforeach
+        </select>
+      </div>
+    @endif
     @if ($area)
       <div class="pb-1 text-slate-400">
         Pipa tersedia di area ini:

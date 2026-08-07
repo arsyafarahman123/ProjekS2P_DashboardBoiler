@@ -178,6 +178,12 @@ class InputDataController extends Controller
     {
         [$unit, $area, $areas] = $this->resolveArea($request);
 
+        // Tahun aktif: sama persis dengan pilihan TAHUN di Tube Mapping
+        // (BoilerTube::YEARS), supaya data yang diinput di sini dan yang
+        // tampil di Tube Mapping selalu merujuk ke tahun yang sama.
+        $years = BoilerTube::YEARS;
+        rsort($years);
+
         $points = [];
         $rows = collect();
         $filledCount = 0;
@@ -193,27 +199,35 @@ class InputDataController extends Controller
             // fallback ke 200 kalau tube_count 0.
             $tubeCount = $this->effectiveTubeCount($area);
 
-            // Info tahun terakhir terukur (hanya untuk badge/header).
-            $lastMeasuredForYear = TubeMeasurement::where('unit', $unit)
-                ->where('section', $area->name)
-                ->max('measured_at');
-            $activeYear = $lastMeasuredForYear
-                ? (int) Carbon::parse($lastMeasuredForYear)->format('Y')
-                : (int) now()->format('Y');
+            // TAHUN dipilih eksplisit lewat dropdown (sama seperti Tube
+            // Mapping). Kalau user belum pernah pilih, default ke tahun
+            // pengukuran terakhir yang tersimpan (atau tahun sekarang).
+            $requestedYear = $request->get('year');
+            if ($requestedYear !== null && in_array((int) $requestedYear, $years, true)) {
+                $activeYear = (int) $requestedYear;
+            } else {
+                $lastMeasuredForYear = TubeMeasurement::where('unit', $unit)
+                    ->where('section', $area->name)
+                    ->max('measured_at');
+                $activeYear = $lastMeasuredForYear
+                    ? (int) Carbon::parse($lastMeasuredForYear)->format('Y')
+                    : max($years);
+            }
 
             $baselines = TubeBaseline::where('unit', $unit)
                 ->where('section', $area->name)
                 ->get()
                 ->keyBy('tube_number');
 
-            // REKAP menampilkan SEMUA data tersimpan (semua tahun), bukan
-            // hanya tahun aktif. Sebelumnya dibatasi $activeYear yang diambil
-            // dari tanggal dummy terbaru (2025), sehingga data input user
-            // manual (mis. tahun 2026) TIDAK PERNAH muncul di rekap.
-            // Untuk tiap titik, ambil nilai dari record dengan YEAR TERBESAR
-            // (pengukuran terakhir yang tersimpan).
+            // REKAP mengikuti TAHUN AKTIF yang dipilih di dropdown, supaya
+            // tabel di Input Data selalu sinkron dengan tahun yang sedang
+            // dilihat di Tube Mapping. Data lama tanpa kolom year (year
+            // NULL) tetap ikut tampil supaya tidak "hilang".
             $measurements = TubeMeasurement::where('unit', $unit)
                 ->where('section', $area->name)
+                ->where(function ($q) use ($activeYear) {
+                    $q->where('year', $activeYear)->orWhereNull('year');
+                })
                 ->get()
                 ->groupBy('tube_number')
                 ->map(function ($rows) {
@@ -229,6 +243,9 @@ class InputDataController extends Controller
             // ukurTubeData() supaya angka di tabel = angka di auto-fill form.
             $lastMeasuredByTube = TubeMeasurement::where('unit', $unit)
                 ->where('section', $area->name)
+                ->where(function ($q) use ($activeYear) {
+                    $q->where('year', $activeYear)->orWhereNull('year');
+                })
                 ->whereNotNull('thickness_mm')
                 ->get()
                 ->sortByDesc(fn ($m) => [$m->measured_at?->timestamp ?? 0, $m->id])
@@ -238,9 +255,9 @@ class InputDataController extends Controller
             // tubesWithData() memakai pluck() yang mengembalikan nilai mentah
             // dari SQLite (string "1", "2", ...). Cast ke integer supaya
             // in_array(..., true) di bawah cocok dengan $no dari range() (int).
-            // Tanpa filter tahun agar pipa dengan data TAHUN BERAPA PUN
-            // (termasuk data manual user) tetap dianggap "terisi" di rekap.
-            $filled = $this->tubesWithData($unit, $area->name)
+            // Dibatasi TAHUN AKTIF supaya "sudah ada data" konsisten dengan
+            // tahun yang sedang dipilih (sama seperti Tube Mapping).
+            $filled = $this->tubesWithData($unit, $area->name, $activeYear)
                 ->map(fn ($v) => (int) $v)
                 ->all();
             $filledCount = count($filled);
@@ -255,11 +272,17 @@ class InputDataController extends Controller
         }
 
         // Satu tanggal ukur untuk semua pipa (pengukuran satu sesi):
-        // pakai tanggal ukur terakhir yang tersimpan, atau hari ini
+        // pakai tanggal ukur terakhir yang tersimpan di TAHUN AKTIF, kalau
+        // tidak ada pakai 1 Januari tahun aktif itu (bukan hari ini),
+        // supaya tanggal yang tersimpan tetap masuk ke tahun yang dipilih.
         $lastMeasured = $area
-            ? TubeMeasurement::where('unit', $unit)->where('section', $area->name)->max('measured_at')
+            ? TubeMeasurement::where('unit', $unit)->where('section', $area->name)
+                ->where('year', $activeYear)
+                ->max('measured_at')
             : null;
-        $measuredAtDefault = $lastMeasured ? substr($lastMeasured, 0, 10) : now()->toDateString();
+        $measuredAtDefault = $lastMeasured
+            ? substr($lastMeasured, 0, 10)
+            : ($activeYear === (int) now()->format('Y') ? now()->toDateString() : "{$activeYear}-01-01");
 
         return view('admin.input-data.ukur', [
             'units' => BoilerTube::UNITS,
@@ -272,6 +295,7 @@ class InputDataController extends Controller
             'filledCount' => $filledCount,
             'measuredAtDefault' => $measuredAtDefault,
             'activeYear' => $activeYear,
+            'years' => $years,
         ]);
     }
 
@@ -381,7 +405,7 @@ class InputDataController extends Controller
         }
 
         return redirect()
-            ->to(route('input-data.ukur', ['unit' => $area->unit, 'section' => $area->name]) . '#pipa-' . $data['tube_number'])
+            ->to(route('input-data.ukur', ['unit' => $area->unit, 'section' => $area->name, 'year' => $year]) . '#pipa-' . $data['tube_number'])
             ->with('status', "Pipa #{$data['tube_number']} ({$area->name}) tersimpan: " . implode(', ', $saved) . ". Tanggal ukur: {$measuredAt}.");
     }
 

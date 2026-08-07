@@ -44,6 +44,20 @@ Route::get('/tube-mapping', [TubeMappingController::class, 'index'])
 Route::get('/tube-mapping/tube/{tubeId}', [TubeMappingController::class, 'show'])
     ->name('tube-mapping.show');
 
+// Upload & serve foto per tube di card popup tube mapping
+Route::post('/tube-mapping/photo', [TubeMappingController::class, 'photoStore'])
+    ->name('tube-mapping.photo.store');
+Route::get('/tube-mapping/photo/{tubePhoto}', [TubeMappingController::class, 'photoFile'])
+    ->name('tube-mapping.photo.file');
+Route::delete('/tube-mapping/photo/{tubePhoto}', [TubeMappingController::class, 'photoDestroy'])
+    ->name('tube-mapping.photo.destroy');
+
+// Export laporan Tube Mapping (Excel/CSV + PDF via halaman print)
+Route::get('/tube-mapping/export/excel', [TubeMappingController::class, 'exportExcel'])
+    ->name('tube-mapping.export.excel');
+Route::get('/tube-mapping/export/pdf', [TubeMappingController::class, 'exportPdf'])
+    ->name('tube-mapping.export.pdf');
+
 
 // ================================
 // RLA ANALYSIS

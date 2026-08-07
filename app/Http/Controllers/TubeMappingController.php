@@ -7,14 +7,17 @@ use App\Models\BoilerImage;
 use App\Models\BoilerTube;
 use App\Models\TubeBaseline;
 use App\Models\TubeMeasurement;
+use App\Models\TubePhoto;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 
 class TubeMappingController extends Controller
 {
-    public function index(Request $request)
+    // Resolve unit + section + year dari query string, dipakai bareng oleh
+    // index() dan export (Excel/PDF) supaya filter yang aktif di layar
+    // selalu sama dengan yang di-export.
+    private function resolveFilters(Request $request): array
     {
-        // Unit & tahun mengikuti data model dashboard (BoilerTube),
-        // supaya konsisten dengan Global View.
         $units = BoilerTube::UNITS;
         $years = BoilerTube::YEARS;
         rsort($years);
@@ -29,9 +32,6 @@ class TubeMappingController extends Controller
             $year = max(BoilerTube::YEARS);
         }
 
-        // Daftar Boiler Section disamakan dengan Risk Summary by Section di
-        // Global View: diambil dari BoilerArea per unit (termasuk area
-        // tambahan yang dibuat admin lewat Add Area).
         $sections = BoilerArea::where('unit', $unit)->orderBy('id')->pluck('name')->all();
 
         $section = $request->get('section', 'Primary Superheater');
@@ -40,6 +40,18 @@ class TubeMappingController extends Controller
                 ? 'Primary Superheater'
                 : ($sections[0] ?? 'Primary Superheater');
         }
+
+        $selectedArea = BoilerArea::where('unit', $unit)->where('name', $section)->first();
+        $tubeCount = $selectedArea?->tube_count ?: 200;
+
+        return [$units, $years, $unit, $year, $sections, $section, $tubeCount];
+    }
+
+    public function index(Request $request)
+    {
+        // Unit & tahun mengikuti data model dashboard (BoilerTube),
+        // supaya konsisten dengan Global View.
+        [$units, $years, $unit, $year, $sections, $section, ] = $this->resolveFilters($request);
 
         $tubes = BoilerTube::query()
             ->where('unit', $unit)
@@ -83,13 +95,6 @@ class TubeMappingController extends Controller
         // sinkron dengan data dummy Unit 3A 2021-2025 aslinya.
         $tubeThicknessStats = $this->thicknessStatsForSection($unit, $section);
 
-        // Tabel titik ukur A-D per tube (persen ketebalan sisa terhadap
-        // baseline). 100-75% = SAFE, <75% = WARNING, <70% = CRITICAL.
-        // Satu titik di bawah 70% sudah cukup bikin tube itu CRITICAL,
-        // walau titik lain masih tinggi (MIN yang menentukan risiko).
-        // Parameter $year penting: filter data per tahun supaya ganti
-        // tahun di dropdown menghasilkan warna & status yang berbeda,
-        // tidak statis (sebelumnya ambil semua tahun tanpa filter).
         $pointsTable = $this->pointsTableForSection($unit, $section, $year);
         $pointNames = TubeMeasurement::POINTS;
 
@@ -184,11 +189,24 @@ class TubeMappingController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Foto per tube (upload dari popup card tube mapping) —
+        // dikirim sebagai array [tube_number => [{id, url, nama_file}, ...]]
+        $tubePhotos = TubePhoto::where('unit', $unit)
+            ->where('section', $section)
+            ->get()
+            ->groupBy('tube_number')
+            ->map(fn($photos) => $photos->map(fn($p) => [
+                'id' => $p->id,
+                'url' => route('tube-mapping.photo.file', $p),
+                'nama_file' => $p->nama_file,
+                'is_image' => (bool) preg_match('/\.(jpe?g|png|gif|webp|bmp|svg)$/i', $p->nama_file),
+            ])->values()->all());
+
         return view('tube-mapping.index', compact(
             'tubePoints', 'tubeCount', 'tubePointNames', 'summary', 'topPriority',
             'historicalNdt', 'creepTrend', 'units', 'sections', 'years',
             'unit', 'section', 'year', 'statusByTubeNumber', 'tubeThicknessStats', 'creepByTubeNumber', 'sectionCode',
-            'pointsTable', 'pointNames', 'boilerImages', 'measurementSummary'
+            'pointsTable', 'pointNames', 'boilerImages', 'measurementSummary', 'tubePhotos'
         ));
     }
 
@@ -271,6 +289,9 @@ class TubeMappingController extends Controller
                 'avg_mm' => $avgMm,
                 'status' => $status,
                 'creep_pct' => $creepPct,
+                // NILAI AWAL (baseline) pipa ini — dari TubeBaseline, sama
+                // dengan yang diisi/tampil di Input Data Pengukuran.
+                'baseline' => $baseline !== null ? round($baseline, 2) : null,
             ];
         }
 
@@ -342,5 +363,164 @@ class TubeMappingController extends Controller
             'recommended_action' => BoilerTube::actionFromStatus($status),
             'scan_date' => $tube->scan_date?->format('Y-m-d'),
         ]);
+    }
+
+    /**
+     * Upload foto untuk satu tube dari popup card tube mapping.
+     */
+    public function photoStore(Request $request)
+    {
+        try {
+            // Tidak dibatasi tipe file (image/PDF/dokumen apapun boleh) dan
+            // ukuran dibikin sangat longgar (2GB, di atas batas real PHP
+            // upload_max_filesize/post_max_size — lihat public/.user.ini).
+            // 'max' di sini cuma jaring pengaman terakhir, bukan batas utama.
+            $request->validate([
+                'unit' => 'required|string',
+                'section' => 'required|string',
+                'tube_number' => 'required|integer',
+                'photo' => 'required|file|max:2097152', // 2048 MB
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => collect($e->errors())->flatten()->implode(' '),
+            ], 422);
+        }
+
+        try {
+            $file = $request->file('photo');
+            $originalName = $file->getClientOriginalName();
+            $ext = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'bin');
+            $safeName = uniqid('tube_') . '.' . $ext;
+            $path = $file->storeAs('tube_photos', $safeName, 'public');
+
+            $photo = TubePhoto::create([
+                'unit' => $request->unit,
+                'section' => $request->section,
+                'tube_number' => $request->tube_number,
+                'nama_file' => $originalName,
+                'path' => $path,
+            ]);
+
+            return response()->json([
+                'ok' => true,
+                'id' => $photo->id,
+                'url' => route('tube-mapping.photo.file', $photo),
+                'nama_file' => $originalName,
+                'is_image' => (bool) preg_match('/\.(jpe?g|png|gif|webp|bmp|svg)$/i', $originalName),
+            ]);
+        } catch (\Throwable $e) {
+            // Selalu balikin JSON walau ada error tak terduga (mis. disk
+            // penuh, permission storage/app/public salah, dst) supaya
+            // frontend tidak nerima HTML/500 kosong yang bikin "status 200"
+            // palsu setelah redirect.
+            return response()->json([
+                'ok' => false,
+                'message' => 'Server error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Serve file foto tube (disimpan di storage/app/public/tube_photos).
+     */
+    public function photoFile(TubePhoto $tubePhoto)
+    {
+        $disk = Storage::disk('public');
+        if (! $disk->exists($tubePhoto->path)) {
+            abort(404);
+        }
+
+        $fullPath = $disk->path($tubePhoto->path);
+        $mime = mime_content_type($fullPath) ?: 'application/octet-stream';
+
+        return response()->file($fullPath, [
+            'Content-Type' => $mime,
+        ]);
+    }
+
+    /**
+     * Hapus foto tube dari popup card.
+     */
+    public function photoDestroy(TubePhoto $tubePhoto)
+    {
+        $disk = Storage::disk('public');
+        if ($disk->exists($tubePhoto->path)) {
+            $disk->delete($tubePhoto->path);
+        }
+        $tubePhoto->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Export laporan Tube Mapping (tabel Titik A-D per pipa) ke CSV —
+     * dibuka Excel/Google Sheets langsung. Filter unit/section/tahun
+     * ikut apa yang lagi aktif di layar (dikirim lewat query string).
+     */
+    public function exportExcel(Request $request)
+    {
+        [, , $unit, $year, , $section, $tubeCount] = $this->resolveFilters($request);
+
+        $pointsTable = $this->pointsTableForSection($unit, $section, $year);
+        $pointNames = TubeMeasurement::POINTS;
+
+        $filename = 'tube-mapping-' . str($unit)->slug() . '-' . str($section)->slug() . '-' . $year . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($pointsTable, $pointNames, $tubeCount, $unit, $section, $year) {
+            $out = fopen('php://output', 'w');
+            // BOM supaya Excel baca UTF-8 dengan benar
+            fwrite($out, "\xEF\xBB\xBF");
+
+            fputcsv($out, ["Tube Mapping Report - {$unit} - {$section} - Tahun {$year}"]);
+            fputcsv($out, []);
+
+            $header = ['Tube #', 'Nilai Awal (mm)'];
+            foreach ($pointNames as $p) {
+                $header[] = "Titik {$p} (mm)";
+            }
+            $header = array_merge($header, ['Min (mm)', 'Max (mm)', 'Avg (mm)', 'Status']);
+            fputcsv($out, $header);
+
+            for ($i = 1; $i <= $tubeCount; $i++) {
+                $row = $pointsTable[$i] ?? null;
+                $line = [$i, $row['baseline'] ?? ''];
+                foreach ($pointNames as $p) {
+                    $line[] = $row['mm'][$p] ?? '';
+                }
+                $line[] = $row['min_mm'] ?? '';
+                $line[] = $row['max_mm'] ?? '';
+                $line[] = $row['avg_mm'] ?? '';
+                $line[] = $row ? strtoupper($row['status']) : 'BELUM ADA DATA';
+                fputcsv($out, $line);
+            }
+
+            fclose($out);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Export laporan Tube Mapping ke PDF lewat halaman print khusus
+     * (tanpa dependency tambahan) — browser yang generate PDF-nya lewat
+     * dialog Print > Save as PDF, otomatis kebuka begitu halaman dimuat.
+     */
+    public function exportPdf(Request $request)
+    {
+        [, , $unit, $year, , $section, $tubeCount] = $this->resolveFilters($request);
+
+        $pointsTable = $this->pointsTableForSection($unit, $section, $year);
+        $pointNames = TubeMeasurement::POINTS;
+
+        return view('tube-mapping.print', compact(
+            'unit', 'section', 'year', 'tubeCount', 'pointsTable', 'pointNames'
+        ));
     }
 }

@@ -36,48 +36,64 @@
         Atur titik ukur lewat <a href="{{ route('input-data.titik', ['unit' => $unit, 'section' => $area->name]) }}" class="text-accent hover:underline font-semibold">Add/Delete Titik</a>.
       </div>
 
-      <form method="POST" action="{{ route('input-data.ukur.store') }}" class="grid sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end" id="form-ukur">
+      <form method="POST" action="{{ route('input-data.ukur.store') }}" id="form-ukur">
         @csrf
         <input type="hidden" name="unit" value="{{ $unit }}">
         <input type="hidden" name="section" value="{{ $area->name }}">
 
-        <div>
-          <label class="field-label" for="tube_number">1. PILIH PIPA #</label>
-          <select class="field-input" id="tube_number" name="tube_number" required>
-            <option value="">&mdash; pilih &mdash;</option>
-            @for ($i = 1; $i <= $tubeCount; $i++)
-              <option value="{{ $i }}" @selected(old('tube_number') == $i)>
-                #{{ $i }}@if ($rows[$i] ?? null) &nbsp;(sudah ada data)@endif
-              </option>
-            @endfor
-          </select>
-        </div>
-
-        {{-- NILAI TITIK untuk SEMUA titik sekaligus (A/B/C/D) --}}
-        @foreach ($points as $p)
+        {{-- Baris 1: pilih pipa + semua nilai titik + nilai ukur + nilai awal --}}
+        <div class="grid sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end mb-4">
           <div>
-            <label class="field-label" for="nilai_{{ $p }}">2.{{ $loop->iteration }}. NILAI TITIK {{ $p }} (MM)</label>
-            <input class="field-input" id="nilai_{{ $p }}" name="nilai_{{ $p }}" type="number" step="0.01" min="0" max="1000"
-                   placeholder="titik {{ $p }}" value="{{ old('nilai_' . $p) }}"
-                   data-old-value="{{ old('nilai_' . $p) }}">
+            <label class="field-label" for="tube_number">1. PILIH PIPA #</label>
+            <select class="field-input" id="tube_number" name="tube_number" required>
+              <option value="">&mdash; pilih &mdash;</option>
+              @for ($i = 1; $i <= $tubeCount; $i++)
+                <option value="{{ $i }}" @selected(old('tube_number') == $i)>
+                  #{{ $i }}@if ($rows[$i] ?? null) &nbsp;(sudah ada data)@endif
+                </option>
+              @endfor
+            </select>
           </div>
-        @endforeach
 
-        <div>
-          <label class="field-label" for="measured_mm">3. NILAI UKUR (MM)</label>
-          <input class="field-input" id="measured_mm" name="measured_mm" type="number" step="0.01" min="0" max="1000"
-                 placeholder="nilai independen per pipa" value="{{ old('measured_mm') }}"
-                 data-old-value="{{ old('measured_mm') }}">
+          @foreach ($points as $p)
+            <div>
+              <label class="field-label" for="nilai_{{ $p }}">2.{{ $loop->iteration }}. NILAI TITIK {{ $p }} (MM)</label>
+              <input class="field-input" id="nilai_{{ $p }}" name="nilai_{{ $p }}" type="number" step="0.01" min="0" max="1000"
+                     placeholder="titik {{ $p }}" value="{{ old('nilai_' . $p) }}"
+                     data-old-value="{{ old('nilai_' . $p) }}">
+            </div>
+          @endforeach
+
+          <div>
+            <label class="field-label" for="measured_mm">3. NILAI UKUR (MM)</label>
+            <input class="field-input" id="measured_mm" name="measured_mm" type="number" step="0.01" min="0" max="1000"
+                   placeholder="nilai independen per pipa" value="{{ old('measured_mm') }}"
+                   data-old-value="{{ old('measured_mm') }}">
+          </div>
+
+          <div>
+            <label class="field-label" for="nilai_awal">4. NILAI AWAL (MM)</label>
+            <input class="field-input" id="nilai_awal" name="nilai_awal" type="number" step="0.01" min="0" max="1000"
+                   placeholder="otomatis terisi dari database" value="{{ old('nilai_awal') }}">
+          </div>
         </div>
 
-        <div>
-          <label class="field-label" for="nilai_awal">4. NILAI AWAL (MM)</label>
-          <input class="field-input" id="nilai_awal" name="nilai_awal" type="number" step="0.01" min="0" max="1000"
-                 placeholder="otomatis terisi dari database" value="{{ old('nilai_awal') }}">
-        </div>
-
-        <div>
-          <button type="submit" class="btn-gold font-bold text-xs px-6 py-2.5 rounded whitespace-nowrap w-full">SIMPAN DATA</button>
+        {{-- TANGGAL UKUR + SIMPAN DATA — ditaruh di panel input atas
+             (sejajar sama field nilai), bukan lagi di bawah tabel rekap,
+             biar user langsung isi & simpan dari satu tempat yang sama. --}}
+        <div class="flex flex-wrap items-end gap-4 pt-4 mt-2 border-t border-white/10">
+          <div class="min-w-[200px]">
+            <label class="field-label" for="session_date">TANGGAL UKUR</label>
+            <input class="field-input" id="session_date" name="measured_at" type="date" value="{{ old('measured_at', $measuredAtDefault) }}">
+          </div>
+          <button type="button" id="btn_set_date_today"
+                  class="text-[11px] font-semibold px-4 py-2.5 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-slate-200 mb-0.5">
+            Hari Ini
+          </button>
+          <button type="submit" class="btn-gold font-bold text-xs px-6 py-2.5 rounded whitespace-nowrap mb-0.5">SIMPAN DATA</button>
+          <div id="session_date_status" class="text-[11px] text-safe font-semibold basis-full hidden">
+            &#10003; Tanggal ukur diset ke <span id="session_date_value"></span> &mdash; berlaku untuk data yang akan disimpan.
+          </div>
         </div>
       </form>
     </div>
@@ -155,28 +171,6 @@
             @endfor
           </tbody>
         </table>
-      </div>
-    </div>
-
-    {{-- Pengaturan tanggal ukur untuk sesi input (berlaku untuk semua submit) --}}
-    <div class="bg-panel rounded-lg p-4 mt-5">
-      <div class="text-xs font-bold tracking-wide mb-1">TANGGAL UKUR (SESI INPUT)</div>
-      <div class="text-[10px] text-slate-500 mb-3">
-        Isi sekali di awal sesi &mdash; tanggal ini otomatis dipakai untuk semua data yang disimpan, tanpa perlu isi ulang per titik.
-      </div>
-      <div class="flex flex-wrap items-end gap-4">
-        <div class="flex-1 min-w-[220px]">
-          <input class="field-input" id="session_date" type="date" value="{{ old('measured_at', $measuredAtDefault) }}">
-        </div>
-        <div class="flex items-center gap-2 pb-0.5">
-          <button type="button" id="btn_set_date_today"
-                  class="text-[11px] font-semibold px-4 py-2.5 rounded bg-white/5 border border-white/10 hover:bg-white/10 text-slate-200">
-            Terapkan Tanggal untuk Semua Data Hari Ini
-          </button>
-        </div>
-      </div>
-      <div id="session_date_status" class="text-[11px] text-safe font-semibold mt-2 hidden">
-        &#10003; Tanggal ukur diset ke <span id="session_date_value"></span> &mdash; berlaku untuk semua data yang akan disimpan di sesi ini.
       </div>
     </div>
 
@@ -309,35 +303,13 @@
   }
 
   // ============================================
-  // 2. TANGGAL UKUR SESI: cukup isi sekali,
-  //    berlaku untuk semua submit di sesi ini.
-  //    Tanpa JS sekalipun, controller tetap pakai
-  //    tanggal yang dikirim form per-submit.
+  // 2. TANGGAL UKUR: sekarang sudah langsung ada
+  //    di dalam #form-ukur (name="measured_at"),
+  //    jadi tidak perlu lagi field hidden duplikat.
   // ============================================
   var sessionDate = document.getElementById('session_date');
-  var form = document.getElementById('form-ukur');
 
-  // Field tanggal di form utama dibuat hidden alias —
-  // nilainya diambil dari session_date saat submit.
-  var hiddenDate = document.createElement('input');
-  hiddenDate.type = 'hidden';
-  hiddenDate.name = 'measured_at';
-  hiddenDate.value = sessionDate ? sessionDate.value : '';
-  if (form && sessionDate) {
-    form.appendChild(hiddenDate);
-
-    // Selalu sinkron tanggal sesi ke field hidden saat user mengubahnya
-    sessionDate.addEventListener('change', function () {
-      hiddenDate.value = sessionDate.value;
-    });
-
-    // Saat submit, pastikan nilai terbaru ikut terkirim
-    form.addEventListener('submit', function () {
-      hiddenDate.value = sessionDate.value;
-    });
-  }
-
-  // Tombol "Terapkan Tanggal untuk Semua Data Hari Ini"
+  // Tombol "Hari Ini"
   var btnToday = document.getElementById('btn_set_date_today');
   var dateStatus = document.getElementById('session_date_status');
   var dateValue = document.getElementById('session_date_value');
@@ -348,7 +320,6 @@
       var mm = String(today.getMonth() + 1).padStart(2, '0');
       var dd = String(today.getDate()).padStart(2, '0');
       sessionDate.value = yyyy + '-' + mm + '-' + dd;
-      if (hiddenDate) hiddenDate.value = sessionDate.value;
 
       dateValue.textContent = sessionDate.value;
       dateStatus.classList.remove('hidden');

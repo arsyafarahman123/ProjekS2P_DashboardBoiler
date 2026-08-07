@@ -251,6 +251,10 @@
             <span>NILAI TERENDAH (MIN): <span class="font-semibold" :class="avgPointPctClass()" x-text="avgPointPctText()"></span></span>
           </div>
 
+          <div class="mb-2 text-slate-300">NILAI THICKNESS (MIN): <span class="font-semibold text-white" x-text="minThicknessMmText()"></span></div>
+
+          <div class="mb-2 text-slate-300">NILAI AWAL (BASELINE): <span class="font-semibold text-white" x-text="baselineValue()"></span></div>
+
           <div class="text-[10px] font-bold tracking-wide text-slate-400 mb-1">TITIK PENGUKURAN (KETEBALAN PER TITIK A&ndash;D)</div>
           <div class="space-y-1 text-slate-300">
             <template x-for="p in pointList()" :key="p">
@@ -260,6 +264,32 @@
             </template>
             <div x-show="!hasPointData()" class="text-slate-500 pt-1">
               Belum ada data titik ukur untuk tube ini.
+            </div>
+          </div>
+
+          <!-- FOTO TUBE (opsional) — upload langsung dari popup card -->
+          <div class="mt-3 pt-3 border-t border-white/10">
+            <div class="text-[10px] font-bold tracking-wide text-slate-400 mb-2">FOTO TUBE (OPSIONAL)</div>
+            <div class="space-y-2">
+              <template x-for="photo in tubePhotos()" :key="photo.id">
+                <div class="flex items-start gap-2 bg-black/20 rounded p-1.5">
+                  <a :href="photo.url" target="_blank" class="flex-1 min-w-0">
+                    <template x-if="isImageFile(photo)">
+                      <img :src="photo.url" class="w-full rounded border border-white/10 object-cover" style="max-height:160px;" x-on:error="$el.style.display='none'; $el.nextElementSibling.style.display='flex'">
+                    </template>
+                    <div class="items-center gap-2 rounded border border-white/10 p-2 text-[10px] text-slate-300 truncate" :class="isImageFile(photo) ? 'hidden' : 'flex'">
+                      <span>📄</span>
+                      <span class="truncate" x-text="photo.nama_file"></span>
+                    </div>
+                  </a>
+                  <button @click="deletePhoto(photo.id)" class="text-red-400 hover:text-red-300 text-[10px] shrink-0" title="Hapus foto">✕</button>
+                </div>
+              </template>
+            </div>
+            <div x-show="!tubePhotos().length" class="text-[10px] text-slate-500 mb-2">Belum ada foto.</div>
+            <div class="mt-2">
+              <input type="file" @change="uploadPhoto($event)" class="text-[10px] text-slate-300 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:bg-accent file:text-black file:font-bold file:cursor-pointer" style="max-width:100%;">
+              <div class="text-[9px] text-slate-500 mt-1">Semua tipe file didukung, ukuran besar tetap bisa diupload.</div>
             </div>
           </div>
         </div>
@@ -272,11 +302,22 @@
               <div class="text-xs font-bold tracking-wide">BOILER 3D STRUCTURE</div>
               <div class="text-[9px] text-slate-500">{{ strtoupper($unit) }}</div>
             </div>
-            <a href="#" class="font-bold text-[10px] px-3 py-2 rounded flex items-center justify-center gap-2 whitespace-nowrap"
-               style="background:linear-gradient(135deg, #c9982f 0%, #8a6520 100%);color:#fff;letter-spacing:0.5px;">
-              <img src="{{ asset('images/download.png') }}" alt="" style="width:14px;height:14px;filter:brightness(0) invert(1);">
-              EXPORT REPORT (PDF/EXCEL)
-            </a>
+            <div class="relative" x-data="{ exportOpen: false }" @click.outside="exportOpen = false">
+              <button type="button" @click="exportOpen = !exportOpen"
+                 class="font-bold text-[10px] px-3 py-2 rounded flex items-center justify-center gap-2 whitespace-nowrap"
+                 style="background:linear-gradient(135deg, #c9982f 0%, #8a6520 100%);color:#fff;letter-spacing:0.5px;">
+                <img src="{{ asset('images/download.png') }}" alt="" style="width:14px;height:14px;filter:brightness(0) invert(1);">
+                EXPORT REPORT (PDF/EXCEL)
+              </button>
+              <div x-show="exportOpen" x-cloak
+                   class="absolute right-0 mt-2 w-48 bg-[#0d1830] border border-white/10 rounded-lg shadow-2xl z-30 text-[11px] overflow-hidden">
+                <a href="{{ route('tube-mapping.export.excel', ['unit' => $unit, 'section' => $section, 'year' => $year]) }}"
+                   class="block px-4 py-2.5 text-slate-200 hover:bg-white/10">Download Excel (CSV)</a>
+                <a href="{{ route('tube-mapping.export.pdf', ['unit' => $unit, 'section' => $section, 'year' => $year]) }}"
+                   target="_blank"
+                   class="block px-4 py-2.5 text-slate-200 hover:bg-white/10 border-t border-white/10">Download PDF</a>
+              </div>
+            </div>
           </div>
           @if(isset($boilerImages) && $boilerImages->isNotEmpty())
             @php $latestImg = $boilerImages->first(); $ext = strtolower(pathinfo($latestImg->nama_file, PATHINFO_EXTENSION)); @endphp
@@ -341,6 +382,7 @@
           <thead class="text-slate-400 sticky top-0 bg-[#0e2038]">
             <tr class="text-left">
               <th class="font-normal pb-2 pr-3">TUBE #</th>
+              <th class="font-normal pb-2 pr-3">NILAI AWAL (MM)</th>
               @foreach($pointNames as $p)
                 <th class="font-normal pb-2 pr-3">TITIK {{ $p }} (MM)</th>
               @endforeach
@@ -364,6 +406,7 @@
               <tr id="point-row-{{ $i }}" class="border-t border-white/5 cursor-pointer hover:bg-white/[0.04]"
                   @click="selectPshTube({{ $i }}, $event)">
                 <td class="py-1.5 pr-3 font-semibold">{{ $i }}</td>
+                <td class="py-1.5 pr-3 text-slate-300">{{ $row['baseline'] ?? '—' }}</td>
                 @foreach($pointNames as $p)
                   @php
                     $pct = $row['pct'][$p] ?? null;
@@ -427,6 +470,8 @@ const POINT_NAMES = @json($pointNames);
 // sesuai section yang lagi dibuka, bukan selalu "PSH".
 const SECTION_CODE = @json($sectionCode);
 const ACTIVE_UNIT = @json($unit);
+const ACTIVE_SECTION = @json($section);
+const TUBE_PHOTOS = @json($tubePhotos);
 
 function tubeDashboard() {
   return {
@@ -446,6 +491,16 @@ function tubeDashboard() {
       const row = POINTS_TABLE[this.selected?.no];
       if (!row || row.pct[p] == null) return '—';
       return Number(row.pct[p]).toFixed(1) + '%';
+    },
+    baselineValue() {
+      const row = POINTS_TABLE[this.selected?.no];
+      if (!row || row.baseline == null) return '—';
+      return Number(row.baseline).toFixed(2) + ' mm';
+    },
+    minThicknessMmText() {
+      const row = POINTS_TABLE[this.selected?.no];
+      if (!row || row.min_mm == null) return '—';
+      return Number(row.min_mm).toFixed(2) + ' mm';
     },
     thicknessStat(kind) {
       const stats = TUBE_THICKNESS_STATS[this.selected?.no];
@@ -525,7 +580,7 @@ function tubeDashboard() {
       const btnRect = btn.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
       const popupWidth = 320;   // sesuai w-80
-      const popupHeightEstimate = 160;
+      const popupHeightEstimate = 350;
 
       let left = (btnRect.left - containerRect.left) + (btnRect.width / 2) - (popupWidth / 2);
       left = Math.max(8, Math.min(left, container.clientWidth - popupWidth - 8));
@@ -537,6 +592,79 @@ function tubeDashboard() {
       top = Math.max(8, top);
 
       this.popupStyle = `top:${top}px; left:${left}px;`;
+    },
+    tubePhotos() {
+      return this.selected ? (TUBE_PHOTOS[this.selected.no] || []) : [];
+    },
+    isImageFile(photo) {
+      if (typeof photo.is_image === 'boolean') return photo.is_image;
+      return /\.(jpe?g|png|gif|webp|bmp|svg)(\?.*)?$/i.test(photo.nama_file || photo.url || '');
+    },
+    async uploadPhoto(event) {
+      const file = event.target.files[0];
+      if (!file || !this.selected) return;
+
+      const tubeNo = this.selected.no;
+      const form = new FormData();
+      form.append('unit', ACTIVE_UNIT);
+      form.append('section', ACTIVE_SECTION);
+      form.append('tube_number', tubeNo);
+      form.append('photo', file);
+
+      this.toast = 'Mengupload foto...';
+
+      try {
+        const res = await fetch('{{ route('tube-mapping.photo.store') }}', {
+          method: 'POST',
+          headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+          body: form,
+        });
+
+        let data = null;
+        try { data = await res.json(); } catch (parseErr) { data = null; }
+
+        if (res.ok && data && data.ok) {
+          if (!TUBE_PHOTOS[tubeNo]) {
+            TUBE_PHOTOS[tubeNo] = [];
+          }
+          TUBE_PHOTOS[tubeNo].push({ id: data.id, url: data.url, nama_file: data.nama_file, is_image: data.is_image });
+          this.toast = 'Foto berhasil diupload!';
+        } else {
+          // Tampilkan pesan error dari server kalau ada (mis. validasi
+          // gagal: ukuran/format foto tidak sesuai), supaya upload yang
+          // gagal TIDAK diam-diam kelihatan seperti "nggak kejadian apa-apa".
+          const serverMsg = data?.message
+            || (data?.errors ? Object.values(data.errors).flat().join(' ') : null);
+          this.toast = serverMsg
+            ? ('Gagal upload: ' + serverMsg)
+            : ('Gagal upload foto (status ' + res.status + ').');
+        }
+      } catch (e) {
+        this.toast = 'Gagal upload foto: koneksi/server error.';
+      }
+
+      setTimeout(() => this.toast = null, 4000);
+      event.target.value = '';
+    },
+    async deletePhoto(photoId) {
+      if (!confirm('Hapus foto ini?')) return;
+      try {
+        const res = await fetch(`/tube-mapping/photo/${photoId}`, {
+          method: 'DELETE',
+          headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        });
+        const data = await res.json();
+        if (data.ok) {
+          if (TUBE_PHOTOS[this.selected.no]) {
+            TUBE_PHOTOS[this.selected.no] = TUBE_PHOTOS[this.selected.no].filter(p => p.id !== photoId);
+          }
+          this.toast = 'Foto dihapus.';
+          setTimeout(() => this.toast = null, 2500);
+        }
+      } catch (e) {
+        this.toast = 'Gagal menghapus foto.';
+        setTimeout(() => this.toast = null, 2500);
+      }
     }
   }
 }
