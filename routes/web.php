@@ -8,7 +8,6 @@ use App\Http\Controllers\InputDataController;
 use App\Http\Controllers\TubeMappingController;
 use Illuminate\Support\Facades\Route;
 
-
 /*
 |--------------------------------------------------------------------------
 | Global View Boiler Dashboard
@@ -54,6 +53,8 @@ Route::delete('/tube-mapping/photo/{tubePhoto}', [TubeMappingController::class, 
 // Export laporan Tube Mapping (Excel/CSV + PDF via halaman print)
 Route::get('/tube-mapping/export/excel', [TubeMappingController::class, 'exportExcel'])
     ->name('tube-mapping.export.excel');
+Route::get('/tube-mapping/export/image', [TubeMappingController::class, 'exportImage'])
+    ->name('tube-mapping.export.image');
 Route::get('/tube-mapping/export/pdf', [TubeMappingController::class, 'exportPdf'])
     ->name('tube-mapping.export.pdf');
 

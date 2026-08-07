@@ -224,6 +224,21 @@ class TubeMappingController extends Controller
      *
      * @return array<int, array{pct: array<string,float|null>, status: string, creep_pct: float|null}>
      */
+    // NILAI UKUR pipa: pakai measured_mm kalau sudah pernah diisi manual,
+    // kalau belum fallback ke thickness_mm dari titik ukur terakhir pipa
+    // ini. Logika SAMA persis dengan InputDataController::tubeData() biar
+    // angka di Tube Mapping selalu selaras dengan angka di Input Data.
+    private function resolveMeasuredMm(int $tubeNumber, $measuredValues, $lastMeasuredByTube): ?float
+    {
+        $measured = $measuredValues[$tubeNumber] ?? null;
+        if ($measured === null || $measured === '') {
+            $last = $lastMeasuredByTube->get($tubeNumber);
+            $measured = $last?->thickness_mm;
+        }
+
+        return $measured !== null ? round((float) $measured, 2) : null;
+    }
+
     private function pointsTableForSection(string $unit, string $section, int $year): array
     {
         $pointNames = TubeMeasurement::POINTS;
@@ -231,6 +246,30 @@ class TubeMappingController extends Controller
         $baselines = TubeBaseline::where('unit', $unit)
             ->where('section', $section)
             ->pluck('initial_thickness_mm', 'tube_number');
+
+        // NILAI UKUR (measured_mm) — nilai independen per pipa, diisi lewat
+        // "3. NILAI UKUR (MM)" di Input Data Pengukuran. Terpisah dari titik
+        // A-D, jadi diambil terpisah juga di sini supaya tabel Tube Mapping
+        // ikut nampilin kolom yang sama persis dengan yang ada di Input Data.
+        $measuredValues = TubeBaseline::where('unit', $unit)
+            ->where('section', $section)
+            ->pluck('measured_mm', 'tube_number');
+
+        // Fallback NILAI UKUR untuk pipa yang belum punya measured_mm
+        // tersimpan (data lama sebelum kolom itu ada): ambil dari record
+        // pengukuran TERAKHIR pipa ini (berdasarkan tanggal ukur, lalu id).
+        // Logika ini SAMA dengan InputDataController::tubeData() supaya
+        // angka NILAI UKUR di Tube Mapping = angka yang tampil di Input Data.
+        $lastMeasuredByTube = TubeMeasurement::where('unit', $unit)
+            ->where('section', $section)
+            ->where(function ($q) use ($year) {
+                $q->where('year', $year)->orWhereNull('year');
+            })
+            ->whereNotNull('thickness_mm')
+            ->get()
+            ->sortByDesc(fn ($m) => [$m->measured_at?->timestamp ?? 0, $m->id])
+            ->groupBy('tube_number')
+            ->map(fn ($g) => $g->first());
 
         // SQLite tidak support YEAR() — gunakan strftime / LIKE
         // untuk memfilter berdasarkan tahun dari kolom measured_at.
@@ -292,8 +331,41 @@ class TubeMappingController extends Controller
                 // NILAI AWAL (baseline) pipa ini — dari TubeBaseline, sama
                 // dengan yang diisi/tampil di Input Data Pengukuran.
                 'baseline' => $baseline !== null ? round($baseline, 2) : null,
+                // NILAI UKUR — dari TubeBaseline.measured_mm, sama dengan
+                // field "3. NILAI UKUR (MM)" di Input Data Pengukuran.
+                // Kalau belum pernah diisi manual, fallback ke titik ukur
+                // terakhir pipa ini (sama seperti tampilan Input Data).
+                'measured_mm' => $this->resolveMeasuredMm($tubeNumber, $measuredValues, $lastMeasuredByTube),
             ];
         }
+
+        // Pipa yang cuma punya NILAI UKUR terisi (tanpa titik A-D sama
+        // sekali) tetap harus muncul di tabel Tube Mapping dengan kolom
+        // NILAI UKUR-nya — bukan cuma pipa yang sudah punya titik A-D.
+        foreach ($measuredValues as $tubeNumber => $mm) {
+            $tubeNumberInt = (int) $tubeNumber;
+            if (!isset($table[$tubeNumberInt])) {
+                $baseline = $baselines[$tubeNumber] ?? null;
+                $table[$tubeNumberInt] = [
+                    'pct' => array_fill_keys($pointNames, null),
+                    'mm' => array_fill_keys($pointNames, null),
+                    'min_mm' => null,
+                    'max_mm' => null,
+                    'avg_mm' => null,
+                    'status' => 'unknown',
+                    'creep_pct' => null,
+                    'baseline' => $baseline !== null ? round($baseline, 2) : null,
+                    'measured_mm' => $this->resolveMeasuredMm($tubeNumberInt, $measuredValues, $lastMeasuredByTube),
+                ];
+            }
+        }
+
+        // Pipa yang cuma punya fallback (dari titik ukur terakhir) tapi
+        // sama sekali belum ada di $table atau di $measuredValues — misal
+        // titik A-D diisi di tahun ini tapi measured_mm belum pernah
+        // disimpan dan tube-nya juga baru muncul lewat fallback — sudah
+        // otomatis ke-cover lewat dua loop di atas ($measurements dan
+        // $measuredValues), jadi tidak perlu loop tambahan di sini.
 
         return $table;
     }
@@ -433,7 +505,10 @@ class TubeMappingController extends Controller
         }
 
         $fullPath = $disk->path($tubePhoto->path);
-        $mime = mime_content_type($fullPath) ?: 'application/octet-stream';
+        // Ditentukan manual dari ekstensi — TIDAK pakai mime_content_type()
+        // karena fungsi itu butuh ekstensi PHP `fileinfo` yang belum tentu
+        // aktif di server (kalau mati, mime_content_type() fatal error).
+        $mime = $this->guessMimeFromExtension($tubePhoto->nama_file);
 
         return response()->file($fullPath, [
             'Content-Type' => $mime,
@@ -481,7 +556,7 @@ class TubeMappingController extends Controller
             fputcsv($out, ["Tube Mapping Report - {$unit} - {$section} - Tahun {$year}"]);
             fputcsv($out, []);
 
-            $header = ['Tube #', 'Nilai Awal (mm)'];
+            $header = ['Tube #', 'Nilai Awal (mm)', 'Nilai Ukur (mm)'];
             foreach ($pointNames as $p) {
                 $header[] = "Titik {$p} (mm)";
             }
@@ -490,7 +565,7 @@ class TubeMappingController extends Controller
 
             for ($i = 1; $i <= $tubeCount; $i++) {
                 $row = $pointsTable[$i] ?? null;
-                $line = [$i, $row['baseline'] ?? ''];
+                $line = [$i, $row['baseline'] ?? '', $row['measured_mm'] ?? ''];
                 foreach ($pointNames as $p) {
                     $line[] = $row['mm'][$p] ?? '';
                 }
@@ -522,5 +597,71 @@ class TubeMappingController extends Controller
         return view('tube-mapping.print', compact(
             'unit', 'section', 'year', 'tubeCount', 'pointsTable', 'pointNames'
         ));
+    }
+
+    /**
+     * Download gambar Boiler 3D Structure apa adanya (file aslinya —
+     * gambar upload admin, atau PDF drawing bawaan untuk Unit 3A),
+     * terpisah dari laporan data Tube Mapping.
+     */
+    /**
+     * Tebak Content-Type dari ekstensi file secara manual — TIDAK pakai
+     * fileinfo/mime_content_type(), karena ekstensi PHP `fileinfo` itu
+     * belum tentu aktif di server (bikin response()->download() polos
+     * error "Unable to guess the MIME type" alias 500).
+     */
+    private function guessMimeFromExtension(string $filename): string
+    {
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+        return match ($ext) {
+            'pdf' => 'application/pdf',
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'bmp' => 'image/bmp',
+            'svg' => 'image/svg+xml',
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xls' => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'zip' => 'application/zip',
+            'txt' => 'text/plain',
+            default => 'application/octet-stream',
+        };
+    }
+
+    public function exportImage(Request $request)
+    {
+        [, , $unit, , , $section] = $this->resolveFilters($request);
+
+        $latestImg = BoilerImage::where('unit', $unit)
+            ->where('section', $section)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if ($latestImg) {
+            $path = Storage::disk('public')->path($latestImg->path);
+            if (!is_file($path)) {
+                abort(404, 'File gambar boiler tidak ditemukan.');
+            }
+            return response()->download($path, $latestImg->nama_file, [
+                'Content-Type' => $this->guessMimeFromExtension($latestImg->nama_file),
+            ]);
+        }
+
+        if ($unit === BoilerTube::DEFAULT_UNIT) {
+            $defaultPath = public_path('images/F2092S-J0203-05 R1 SECTION VIEW DRAWING OF BOILER HOUSE.pdf');
+            if (!is_file($defaultPath)) {
+                abort(404, 'File gambar boiler default tidak ditemukan.');
+            }
+            $downloadName = 'Boiler 3D Structure - ' . $unit . '.pdf';
+            return response()->download($defaultPath, $downloadName, [
+                'Content-Type' => 'application/pdf',
+            ]);
+        }
+
+        abort(404, 'Gambar Boiler 3D Structure belum tersedia untuk ' . $unit . '.');
     }
 }

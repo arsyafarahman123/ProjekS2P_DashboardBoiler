@@ -715,7 +715,24 @@ class InputDataController extends Controller
             abort(404, 'File tidak ditemukan.');
         }
 
-        return response()->download($full, $document->nama_file);
+        // Content-Type ditentukan manual dari ekstensi — TIDAK boleh
+        // dibiarkan nebak sendiri (butuh ekstensi PHP `fileinfo` yang
+        // belum tentu aktif di server, bisa bikin download error 500).
+        $mime = match (strtolower(pathinfo($document->nama_file, PATHINFO_EXTENSION))) {
+            'pdf' => 'application/pdf',
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'xls' => 'application/vnd.ms-excel',
+            'csv' => 'text/csv',
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            default => 'application/octet-stream',
+        };
+
+        return response()->download($full, $document->nama_file, [
+            'Content-Type' => $mime,
+        ]);
     }
 
     public function rlaDestroy(RlaDocument $document)

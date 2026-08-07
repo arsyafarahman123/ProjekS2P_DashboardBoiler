@@ -255,6 +255,8 @@
 
           <div class="mb-2 text-slate-300">NILAI AWAL (BASELINE): <span class="font-semibold text-white" x-text="baselineValue()"></span></div>
 
+          <div class="mb-2 text-slate-300">NILAI UKUR: <span class="font-semibold text-white" x-text="measuredValue()"></span></div>
+
           <div class="text-[10px] font-bold tracking-wide text-slate-400 mb-1">TITIK PENGUKURAN (KETEBALAN PER TITIK A&ndash;D)</div>
           <div class="space-y-1 text-slate-300">
             <template x-for="p in pointList()" :key="p">
@@ -310,12 +312,16 @@
                 EXPORT REPORT (PDF/EXCEL)
               </button>
               <div x-show="exportOpen" x-cloak
-                   class="absolute right-0 mt-2 w-48 bg-[#0d1830] border border-white/10 rounded-lg shadow-2xl z-30 text-[11px] overflow-hidden">
+                   class="absolute right-0 mt-2 w-64 bg-[#0d1830] border border-white/10 rounded-lg shadow-2xl z-30 text-[11px] overflow-hidden">
+                <div class="px-4 pt-2.5 pb-1 text-[9px] font-bold tracking-wide text-slate-500">GAMBAR BOILER</div>
+                <a href="{{ route('tube-mapping.export.image', ['unit' => $unit, 'section' => $section, 'year' => $year]) }}"
+                   class="block px-4 py-2.5 text-slate-200 hover:bg-white/10">Download Gambar Boiler</a>
+                <div class="border-t border-white/10 px-4 pt-2.5 pb-1 text-[9px] font-bold tracking-wide text-slate-500">TUBE MAPPING REPORT</div>
                 <a href="{{ route('tube-mapping.export.excel', ['unit' => $unit, 'section' => $section, 'year' => $year]) }}"
-                   class="block px-4 py-2.5 text-slate-200 hover:bg-white/10">Download Excel (CSV)</a>
+                   class="block px-4 py-2.5 text-slate-200 hover:bg-white/10">Download Report (Excel/CSV)</a>
                 <a href="{{ route('tube-mapping.export.pdf', ['unit' => $unit, 'section' => $section, 'year' => $year]) }}"
                    target="_blank"
-                   class="block px-4 py-2.5 text-slate-200 hover:bg-white/10 border-t border-white/10">Download PDF</a>
+                   class="block px-4 py-2.5 text-slate-200 hover:bg-white/10 border-t border-white/10">Download Report (PDF)</a>
               </div>
             </div>
           </div>
@@ -383,6 +389,7 @@
             <tr class="text-left">
               <th class="font-normal pb-2 pr-3">TUBE #</th>
               <th class="font-normal pb-2 pr-3">NILAI AWAL (MM)</th>
+              <th class="font-normal pb-2 pr-3">NILAI UKUR (MM)</th>
               @foreach($pointNames as $p)
                 <th class="font-normal pb-2 pr-3">TITIK {{ $p }} (MM)</th>
               @endforeach
@@ -407,6 +414,7 @@
                   @click="selectPshTube({{ $i }}, $event)">
                 <td class="py-1.5 pr-3 font-semibold">{{ $i }}</td>
                 <td class="py-1.5 pr-3 text-slate-300">{{ $row['baseline'] ?? '—' }}</td>
+                <td class="py-1.5 pr-3 text-accent font-semibold">{{ $row['measured_mm'] ?? '—' }}</td>
                 @foreach($pointNames as $p)
                   @php
                     $pct = $row['pct'][$p] ?? null;
@@ -478,6 +486,10 @@ function tubeDashboard() {
     selected: null,
     popupStyle: '',
     toast: null,
+    // Foto per tube disimpan sebagai state reaktif Alpine (bukan variabel
+    // global biasa) — supaya begitu upload/hapus foto sukses, card popup
+    // langsung ke-refresh otomatis tanpa perlu tutup-buka ulang.
+    photosByTube: TUBE_PHOTOS,
     hasThicknessStats() {
       return !!TUBE_THICKNESS_STATS[this.selected?.no];
     },
@@ -496,6 +508,11 @@ function tubeDashboard() {
       const row = POINTS_TABLE[this.selected?.no];
       if (!row || row.baseline == null) return '—';
       return Number(row.baseline).toFixed(2) + ' mm';
+    },
+    measuredValue() {
+      const row = POINTS_TABLE[this.selected?.no];
+      if (!row || row.measured_mm == null) return '—';
+      return Number(row.measured_mm).toFixed(2) + ' mm';
     },
     minThicknessMmText() {
       const row = POINTS_TABLE[this.selected?.no];
@@ -594,7 +611,7 @@ function tubeDashboard() {
       this.popupStyle = `top:${top}px; left:${left}px;`;
     },
     tubePhotos() {
-      return this.selected ? (TUBE_PHOTOS[this.selected.no] || []) : [];
+      return this.selected ? (this.photosByTube[this.selected.no] || []) : [];
     },
     isImageFile(photo) {
       if (typeof photo.is_image === 'boolean') return photo.is_image;
@@ -624,10 +641,12 @@ function tubeDashboard() {
         try { data = await res.json(); } catch (parseErr) { data = null; }
 
         if (res.ok && data && data.ok) {
-          if (!TUBE_PHOTOS[tubeNo]) {
-            TUBE_PHOTOS[tubeNo] = [];
+          if (!this.photosByTube[tubeNo]) {
+            this.photosByTube[tubeNo] = [];
           }
-          TUBE_PHOTOS[tubeNo].push({ id: data.id, url: data.url, nama_file: data.nama_file, is_image: data.is_image });
+          // .push() ke array yang sudah reaktif ini otomatis kedeteksi
+          // Alpine (Proxy), jadi card langsung nampilin foto tanpa reload.
+          this.photosByTube[tubeNo].push({ id: data.id, url: data.url, nama_file: data.nama_file, is_image: data.is_image });
           this.toast = 'Foto berhasil diupload!';
         } else {
           // Tampilkan pesan error dari server kalau ada (mis. validasi
@@ -655,8 +674,8 @@ function tubeDashboard() {
         });
         const data = await res.json();
         if (data.ok) {
-          if (TUBE_PHOTOS[this.selected.no]) {
-            TUBE_PHOTOS[this.selected.no] = TUBE_PHOTOS[this.selected.no].filter(p => p.id !== photoId);
+          if (this.photosByTube[this.selected.no]) {
+            this.photosByTube[this.selected.no] = this.photosByTube[this.selected.no].filter(p => p.id !== photoId);
           }
           this.toast = 'Foto dihapus.';
           setTimeout(() => this.toast = null, 2500);

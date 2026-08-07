@@ -11,6 +11,11 @@
   .header h1 { font-size: 18px; margin: 0 0 4px; }
   .header .meta { font-size: 11px; color: #444; }
   .brand { font-weight: bold; font-size: 14px; color: #c9982f; }
+  .structure-box { margin-bottom: 14px; page-break-inside: avoid; }
+  .structure-box .label { font-size: 11px; font-weight: bold; color: #333; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+  .structure-box img { max-width: 100%; max-height: 260mm; display: block; margin: 0 auto; border: 1px solid #ccc; }
+  .structure-box embed { width: 100%; height: 260mm; border: 1px solid #ccc; }
+  .structure-box .caption { font-size: 9px; color: #666; margin-top: 4px; text-align: center; }
   table { width: 100%; border-collapse: collapse; font-size: 10px; }
   th, td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; }
   th { background: #101f3a; color: #fff; font-weight: 600; }
@@ -48,6 +53,7 @@
       <tr>
         <th>Tube #</th>
         <th>Nilai Awal (mm)</th>
+        <th>Nilai Ukur (mm)</th>
         @foreach ($pointNames as $p)
           <th>Titik {{ $p }} (mm)</th>
         @endforeach
@@ -71,6 +77,7 @@
         <tr>
           <td>{{ $i }}</td>
           <td>{{ $row['baseline'] ?? '—' }}</td>
+          <td>{{ $row['measured_mm'] ?? '—' }}</td>
           @foreach ($pointNames as $p)
             <td>{{ $row['mm'][$p] ?? '—' }}</td>
           @endforeach
